@@ -49,7 +49,7 @@
         <button type="submit">{{ isRegister ? "Register" : "Log In" }}</button>
 
         <div class="register">
-          <span>{{ isRegister ? "Already have an account?" : "Don't have an account?" }}</span>
+          <span>{{ isRegister ? "Already have an account? " : "Don't have an account? " }}</span>
           <a href="#" @click.prevent="toggleRegister">
             {{ isRegister ? " Login!" : " Register!" }}
           </a>
