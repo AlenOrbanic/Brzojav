@@ -1,60 +1,72 @@
 <template>
   <div class="page">
-    <!-- Background Video -->
     <video autoplay muted loop playsinline class="bg-video">
       <source src="@/assets/bg.mp4" type="video/mp4" />
     </video>
 
-    <!-- Login/Register Card -->
     <div
       class="wrapper"
       :class="{ registerMode: isRegister }"
       ref="formWrapper"
     >
-      <form @submit.prevent="handleSubmit">
-        <h2>{{ isRegister ? "Welcome Chatter!" : "Brzojav Login" }}</h2>
+<form @submit.prevent="handleSubmit">
+  <h2>
+    {{ isForgotPassword ? "Forgot Password?" : isRegister ? "Welcome Chatter!" : "Brzojav Login" }}
+  </h2>
 
-        <!-- Username field (only in register) -->
-        <div class="input-field" v-if="isRegister">
-          <input type="text" required />
-          <label>Username</label>
-        </div>
+  <div v-if="isForgotPassword" class="forgot-password">
+    <p>To recover your password please enter your email or username.</p>
+    <div class="input-field">
+      <input type="text" required class="form-control" />
+      <label>Email or Username</label>
+    </div>
+    <button type="submit">Submit</button>
+    <div class="register">
+      <span>Remembered your password? </span>
+      <a href="#" @click.prevent="isForgotPassword = false">Login!</a>
+    </div>
+  </div>
 
-        <!-- Email -->
-        <div class="input-field">
-          <input type="text" required />
-          <label>Email</label>
-        </div>
+  <template v-else>
+    <div class="input-field" v-if="isRegister">
+      <input type="text" required class="form-control" />
+      <label>Username</label>
+    </div>
 
-        <!-- Password -->
-        <div class="input-field">
-          <input type="password" required />
-          <label>Password</label>
-        </div>
+    <div class="input-field">
+      <input type="text" required class="form-control" />
+      <label>Email</label>
+    </div>
 
-        <!-- Phone (only in register) -->
-        <div class="input-field" v-if="isRegister">
-          <input type="text" required />
-          <label>Phone Number</label>
-        </div>
+    <div class="input-field">
+      <input type="password" required class="form-control" />
+      <label>Password</label>
+    </div>
 
-        <div class="forget">
-          <label>
-            <input type="checkbox" />
-            <span> Remember me</span>
-          </label>
-          <a href="#">Forgot password?</a>
-        </div>
+    <div class="input-field" v-if="isRegister">
+      <input type="text" required class="form-control" />
+      <label>Phone Number</label>
+    </div>
 
-        <button type="submit">{{ isRegister ? "Register" : "Log In" }}</button>
+    <!-- Remember / Forgot -->
+    <div class="forget">
+      <label>
+        <input type="checkbox" />
+        <span> Remember me</span>
+      </label>
+      <a href="#" @click.prevent="openForgotPassword">Forgot password?</a>
+    </div>
 
-        <div class="register">
-          <span>{{ isRegister ? "Already have an account? " : "Don't have an account? " }}</span>
-          <a href="#" @click.prevent="toggleRegister">
-            {{ isRegister ? " Login!" : " Register!" }}
-          </a>
-        </div>
-      </form>
+    <button type="submit">{{ isRegister ? "Register" : "Log In" }}</button>
+
+    <div class="register">
+      <span>{{ isRegister ? "Already have an account? " : "Don't have an account? " }}</span>
+      <a href="#" @click.prevent="toggleRegister">
+        {{ isRegister ? " Login!" : " Register!" }}
+      </a>
+    </div>
+  </template>
+</form>
     </div>
   </div>
 </template>
@@ -63,13 +75,24 @@
 import { ref } from "vue";
 
 const isRegister = ref(false);
+const isForgotPassword = ref(false);
 
 function toggleRegister() {
   isRegister.value = !isRegister.value;
+  isForgotPassword.value = false;
+}
+
+function openForgotPassword() {
+  isForgotPassword.value = true;
+  isRegister.value = false;
 }
 
 function handleSubmit() {
-  alert(isRegister.value ? "Register submitted!" : "Login submitted!");
+  if (isForgotPassword.value) {
+    alert("Forgot password submitted!");
+  } else {
+    alert(isRegister.value ? "Register submitted!" : "Login submitted!");
+  }
 }
 </script>
 
@@ -92,7 +115,6 @@ function handleSubmit() {
   overflow: hidden;
 }
 
-/* Video background */
 .bg-video {
   position: fixed;
   inset: 0;
@@ -104,7 +126,6 @@ function handleSubmit() {
   transform: scale(1.1);
 }
 
-/* Login/Register card */
 .wrapper {
   width: 520px;
   padding: 16px 28px;
@@ -118,13 +139,11 @@ function handleSubmit() {
 
   color: #fff;
 
-  /* Animate height change */
   transition: all 0.4s ease;
 }
 
-/* When register is active, slightly taller form */
 .wrapper.registerMode {
-  padding-bottom: 40px; /* extra space for new fields */
+  padding-bottom: 40px;
 }
 
 form {
@@ -142,10 +161,9 @@ h2 {
   color: #fff;
 }
 
-/* Inputs */
 .input-field {
   position: relative;
-  margin-bottom: 16px; /* adds space between each field */
+  margin-bottom: 16px;
 }
 
 .input-field input {
@@ -167,7 +185,6 @@ h2 {
   color: #fff;
 }
 
-/* Remember / forgot */
 .forget {
   grid-column: span 2;
   display: flex;
@@ -177,7 +194,6 @@ h2 {
   color: #fff;
 }
 
-/* Button */
 button {
   grid-column: span 2;
   height: 36px;
@@ -194,7 +210,6 @@ button:hover {
   opacity: 0.65;
 }
 
-/* Register */
 .register {
   grid-column: span 2;
   text-align: center;
@@ -210,5 +225,53 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+.input-field .form-control:focus {
+  outline: none;
+  border-color: #ff0000;
+  box-shadow: 0 0 0 0.15rem rgb(255, 0, 1);
+}
+
+.forgot-password {
+  display: contents;
+}
+
+.forgot-password p {
+  grid-column: span 2;
+  color: #fff;
+  font-size: 0.95rem;
+  margin: 4px 0 8px 0;
+  text-align: center;
+}
+
+.forgot-password .input-field {
+  grid-column: span 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.forgot-password .input-field input {
+  width: 50%;
+}
+
+.forgot-password .input-field label {
+  top: -20px;
+  left: 120px;
+  width: 50%;
+  text-align: center;
+  font-size: 0.95rem;
+}
+.forgot-password button {
+  grid-column: span 2;
+  height: 36px;
+  margin-bottom: 6px;
+}
+
+.forgot-password .register {
+  grid-column: span 2;
+  text-align: center;
+  margin-top: 4px;
 }
 </style>

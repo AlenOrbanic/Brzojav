@@ -1033,11 +1033,11 @@ export default {
 }
 
 .light .header-icon:hover {
-  background: rgba(255, 0, 0, 0.15);
+  background: rgba(255, 0, 0, 0.5);
 }
 
 .dark .header-icon:hover {
-  background: rgba(255, 0, 0, 0.25);
+  background: rgba(255, 0, 0, 0.3);
 }
 
 .header-icon:hover {
@@ -1162,18 +1162,35 @@ export default {
 .header-menu button:hover {
   background: rgba(0, 0, 0, 0.08);
 }
+
 .contact-menu-btn {
   background: none;
   border: none;
-  font-size: 18px;
+  font-size: 24px;
   cursor: pointer;
-  opacity: 0.6;
+  opacity: 1;
   padding: 4px;
-  border-radius: 6px;
+  border-radius: 50%;
+  color: black;
+  transition: color 0.3s ease, opacity 0.2s ease, background 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
 }
 
 .contact-menu-btn:hover {
   opacity: 1;
-  background: rgba(255, 0, 0, 0.1);
+  background: rgba(255, 0, 0, 0.55);
+}
+
+.dark .contact-menu-btn:hover {
+  opacity: 1;
+  background: rgba(255, 0, 0, 0.25);
+}
+
+.dark .contact-menu-btn {
+  color: white;
 }
 </style>
