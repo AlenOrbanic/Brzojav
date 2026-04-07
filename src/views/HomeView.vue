@@ -7,318 +7,195 @@
       <h5 class="mb-0 me-2">Brzojav</h5>
       <div class="flex-spacer"></div>
       <div class="d-flex align-items-center gap-1">
-        <button
-          class="theme-btn"
-          @click="toggleTheme"
-          data-tooltip="Change Theme"
-        >
+        <button class="theme-btn" @click="toggleTheme" data-tooltip="Change Theme">
           <span v-if="theme === 'light'">⏾</span>
           <span v-else class="sun">☀︎</span>
         </button>
 
-        <button
-          class="theme-btn"
-          @click="handleSpecialAction"
-          data-tooltip="Settings"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            fill="currentColor"
-            class="bi bi-gear-fill"
-            viewBox="0 0 16 16"
-          >
+        <button class="theme-btn" @click="handleSpecialAction" data-tooltip="Settings">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-gear-fill"
+            viewBox="0 0 16 16">
             <path
-              d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.340a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"
-            />
+              d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.340a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z" />
           </svg>
         </button>
       </div>
 
-      <input
-        v-model="globalSearch"
-        type="text"
-        class="form-control search-input"
-        placeholder="Search conversations..."
-      />
+      <input v-model="globalSearch" type="text" class="form-control search-input"
+        placeholder="Search conversations..." />
     </div>
     <div class="app-body">
       <div class="sidebar border-end">
         <div class="profile-section border-bottom mb-2">
           <div class="d-flex align-items-center justify-content-between w-100">
-            <div
-              class="d-flex align-items-center flex-grow-1"
-              @click="goToProfile"
-            >
-              <img
-                :src="user.avatar"
-                class="rounded-circle me-3 avatar-border"
-                width="40"
-                height="40"
-              />
+            <div class="d-flex align-items-center flex-grow-1" @click="goToProfile">
+              <img :src="user.avatar" class="rounded-circle me-3 avatar-border" width="40" height="40" />
               <div>
                 <div class="fw-bold">{{ user.name }}</div>
                 <small class="text-muted">View Profile</small>
               </div>
             </div>
 
-            <button
-              class="theme-btn logout-btn"
-              @click="logout"
-              data-tooltip="Log out"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                fill="currentColor"
-                class="bi bi-box-arrow-left"
-                viewBox="0 0 16 16"
-              >
-                <path
-                  fill-rule="evenodd"
-                  d="M6 12.5a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-8a.5.5 0 0 0-.5.5v2a.5.5 0 0 1-1 0v-2A1.5 1.5 0 0 1 6.5 2h8A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 5 12.5v-2a.5.5 0 0 1 1 0z"
-                />
-                <path
-                  fill-rule="evenodd"
-                  d="M.146 8.354a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L1.707 7.5H10.5a.5.5 0 0 1 0 1H1.707l2.147 2.146a.5.5 0 0 1-.708.708z"
-                />
+            <button class="theme-btn logout-btn" @click="logout" data-tooltip="Log out">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+                class="bi bi-box-arrow-left" viewBox="0 0 16 16">
+                <path fill-rule="evenodd"
+                  d="M6 12.5a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-8a.5.5 0 0 0-.5.5v2a.5.5 0 0 1-1 0v-2A1.5 1.5 0 0 1 6.5 2h8A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 5 12.5v-2a.5.5 0 0 1 1 0z" />
+                <path fill-rule="evenodd"
+                  d="M.146 8.354a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L1.707 7.5H10.5a.5.5 0 0 1 0 1H1.707l2.147 2.146a.5.5 0 0 1-.708.708z" />
               </svg>
             </button>
           </div>
         </div>
         <div class="px-2 py-1">
-          <button
-            class="btn w-100 theme-action-btn"
-            @click="createConversation"
-          >
+          <button class="btn w-100 theme-action-btn" @click="createConversation">
             + New Chat / Group
           </button>
         </div>
         <div class="contacts">
-          <div
-            v-for="chat in filteredChats"
-            :key="chat.id"
+          <div v-for="chat in filteredChats" :key="chat.id"
             class="contact-item d-flex justify-content-between align-items-center"
-            :class="{ active: selectedChat?.id === chat.id }"
-            @click="selectChat(chat)"
-          >
+            :class="{ active: selectedChat?.id === chat.id }" @click="selectChat(chat)">
             <div class="d-flex align-items-center flex-grow-1">
-              <img
-                :src="chat.avatar"
-                class="rounded-circle me-2 avatar-border"
-                width="40"
-                height="40"
-              />
+              <img :src="chat.avatar" class="rounded-circle me-2 avatar-border" width="40" height="40" />
               <div class="flex-grow-1">
-                <div class="fw-semibold">{{ chat.name }}</div>
+                <div class="fw-semibold">
+                  {{ chat.name }}
+                  <span v-if="chat.pinned" class="pinned-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pin"
+                      viewBox="0 0 16 16">
+                      <path
+                        d="M4.146.146A.5.5 0 0 1 4.5 0h7a.5.5 0 0 1 .5.5c0 .68-.342 1.174-.646 1.479-.126.125-.25.224-.354.298v4.431l.078.048c.203.127.476.314.751.555C12.36 7.775 13 8.527 13 9.5a.5.5 0 0 1-.5.5h-4v4.5c0 .276-.224 1.5-.5 1.5s-.5-1.224-.5-1.5V10h-4a.5.5 0 0 1-.5-.5c0-.973.64-1.725 1.17-2.189A6 6 0 0 1 5 6.708V2.277a3 3 0 0 1-.354-.298C4.342 1.674 4 1.179 4 .5a.5.5 0 0 1 .146-.354m1.58 1.408-.002-.001zm-.002-.001.002.001A.5.5 0 0 1 6 2v5a.5.5 0 0 1-.276.447h-.002l-.012.007-.054.03a5 5 0 0 0-.827.58c-.318.278-.585.596-.725.936h7.792c-.14-.34-.407-.658-.725-.936a5 5 0 0 0-.881-.61l-.012-.006h-.002A.5.5 0 0 1 10 7V2a.5.5 0 0 1 .295-.458 1.8 1.8 0 0 0 .351-.271c.08-.08.155-.17.214-.271H5.14q.091.15.214.271a1.8 1.8 0 0 0 .37.282" />
+                    </svg>
+                  </span>
+                  <span v-if="chat.muted" class="pinned-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                      class="bi bi-bell-slash" viewBox="0 0 16 16">
+                      <path
+                        d="M5.164 14H15c-.299-.199-.557-.553-.78-1-.9-1.8-1.22-5.12-1.22-6q0-.396-.06-.776l-.938.938c.02.708.157 2.154.457 3.58.161.767.377 1.566.663 2.258H6.164zm5.581-9.91a4 4 0 0 0-1.948-1.01L8 2.917l-.797.161A4 4 0 0 0 4 7c0 .628-.134 2.197-.459 3.742q-.075.358-.166.718l-1.653 1.653q.03-.055.059-.113C2.679 11.2 3 7.88 3 7c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0c.942.19 1.788.645 2.457 1.284zM10 15a2 2 0 1 1-4 0zm-9.375.625a.53.53 0 0 0 .75.75l14.75-14.75a.53.53 0 0 0-.75-.75z" />
+                    </svg>
+                  </span>
+                </div>
                 <small class="text-muted text-truncate">
                   {{ chat.lastMessage }}
                 </small>
               </div>
             </div>
-            <button
-              class="contact-menu-btn"
-              @click.stop="openChatMenu($event, chat)"
-            >
+            <button class="contact-menu-btn" @click.stop="openChatMenu($event, chat)">
               ⋯
             </button>
           </div>
         </div>
       </div>
       <div class="chat-area d-flex flex-column">
-        <div
-          class="chat-header border-bottom p-3 d-flex align-items-center justify-content-between"
-        >
-          <div v-if="selectedChat" class="d-flex align-items-center">
-            <img
-              :src="selectedChat.avatar"
-              class="rounded-circle me-2 avatar-border"
-              width="40"
-              height="40"
-            />
-            <div class="fw-bold">
-              {{ selectedChat.name }}
+        <div v-if="viewingContactInfo"
+          class="contact-info-view d-flex flex-column align-items-center justify-content-center p-5">
+          <img :src="contactInfoData.avatar" class="rounded-circle mb-3" width="50" height="50" />
+          <div class="fw-bold fs-5 mb-1">{{ contactInfoData.name }}</div>
+          <div class="text-muted fs-6 mb-1">
+            Last seen: {{ contactInfoData.lastSeen }}
+          </div>
+          <div class="text-muted fs-6">{{ contactInfoData.phone }}</div>
+          <button class="btn btn-outline-danger mt-4" @click="closeContactInfo">
+            Back
+          </button>
+        </div>
+
+        <template v-else>
+          <div class="chat-header border-bottom p-3 d-flex align-items-center justify-content-between">
+            <div v-if="selectedChat" class="d-flex align-items-center">
+              <img :src="selectedChat.avatar" class="rounded-circle me-2 avatar-border" width="40" height="40" />
+              <div class="fw-bold">
+                {{ selectedChat.name }}
+              </div>
+            </div>
+
+            <div v-else class="text-muted">Select a conversation</div>
+
+            <div v-if="selectedChat" class="chat-header-actions">
+              <button class="header-icon" data-tooltip="Search">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-search"
+                  viewBox="0 0 16 16">
+                  <path
+                    d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
+                </svg>
+              </button>
+
+              <button class="header-icon" data-tooltip="More" @click.stop="toggleHeaderMenu($event)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
+                  class="bi bi-three-dots-vertical" viewBox="0 0 16 16">
+                  <path
+                    d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0" />
+                </svg>
+              </button>
             </div>
           </div>
+          <div ref="messagesBox" class="messages flex-grow-1 p-3">
+            <div v-for="(msg, index) in selectedChat?.messages || []" :key="index" class="mb-2"
+              :class="msg.sender === 'me' ? 'text-end' : 'text-start'">
+              <div class="message-wrapper w-100 d-flex" :class="msg.sender === 'me'
+                ? 'justify-content-end'
+                : 'justify-content-start'
+                " @mouseenter="hoveredMessage = index" @mouseleave="hoveredMessage = null">
+                <div v-if="hoveredMessage === index && msg.sender === 'me'" class="message-actions">
+                  <button class="action-btn" @click.stop="openMessageMenu($event, msg)" data-tooltip="More">
+                    ⋮
+                  </button>
+                  <button class="action-btn" @click.stop="replyMessage" data-tooltip="Reply">
+                    ⤶
+                  </button>
+                  <button class="action-btn" @click.stop="reactMessage" data-tooltip="React">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                      class="bi bi-emoji-grin" viewBox="0 0 16 16">
+                      <path
+                        d="M12.946 11.398A6.002 6.002 0 0 1 2.108 9.14c-.114-.595.426-1.068 1.028-.997C4.405 8.289 6.48 8.5 8 8.5s3.595-.21 4.864-.358c.602-.07 1.142.402 1.028.998a5.95 5.95 0 0 1-.946 2.258m-.078-2.25C11.588 9.295 9.539 9.5 8 9.5s-3.589-.205-4.868-.352c.11.468.286.91.517 1.317A37 37 0 0 0 8 10.75a37 37 0 0 0 4.351-.285c.231-.407.407-.85.517-1.317m-1.36 2.416c-1.02.1-2.255.186-3.508.186s-2.488-.086-3.507-.186A5 5 0 0 0 8 13a5 5 0 0 0 3.507-1.436ZM6.488 7c.114-.294.179-.636.179-1 0-1.105-.597-2-1.334-2C4.597 4 4 4.895 4 6c0 .364.065.706.178 1 .23-.598.662-1 1.155-1 .494 0 .925.402 1.155 1M12 6c0 .364-.065.706-.178 1-.23-.598-.662-1-1.155-1-.494 0-.925.402-1.155 1a2.8 2.8 0 0 1-.179-1c0-1.105.597-2 1.334-2C11.403 4 12 4.895 12 6" />
+                      <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m0-1A7 7 0 1 1 8 1a7 7 0 0 1 0 14" />
+                    </svg>
+                  </button>
+                </div>
+                <span class="d-inline-block p-2 rounded message" :class="msg.sender === 'me' ? 'sent' : 'received'">
+                  {{ msg.text }}
+                </span>
 
-          <div v-else class="text-muted">Select a conversation</div>
-
-          <div v-if="selectedChat" class="chat-header-actions">
-            <button class="header-icon" data-tooltip="Search">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                fill="currentColor"
-                class="bi bi-search"
-                viewBox="0 0 16 16"
-              >
-                <path
-                  d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"
-                />
-              </svg>
-            </button>
-
-            <button
-              class="header-icon"
-              data-tooltip="More"
-              @click.stop="toggleHeaderMenu($event)"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                fill="currentColor"
-                class="bi bi-three-dots-vertical"
-                viewBox="0 0 16 16"
-              >
-                <path
-                  d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
-        <div ref="messagesBox" class="messages flex-grow-1 p-3">
-          <div
-            v-for="(msg, index) in selectedChat?.messages || []"
-            :key="index"
-            class="mb-2"
-            :class="msg.sender === 'me' ? 'text-end' : 'text-start'"
-          >
-            <div
-              class="message-wrapper w-100 d-flex"
-              :class="
-                msg.sender === 'me'
-                  ? 'justify-content-end'
-                  : 'justify-content-start'
-              "
-              @mouseenter="hoveredMessage = index"
-              @mouseleave="hoveredMessage = null"
-            >
-              <div
-                v-if="hoveredMessage === index && msg.sender === 'me'"
-                class="message-actions"
-              >
-                <button
-                  class="action-btn"
-                  @click.stop="openMessageMenu($event, msg)"
-                  data-tooltip="More"
-                >
-                  ⋮
-                </button>
-                <button
-                  class="action-btn"
-                  @click.stop="replyMessage"
-                  data-tooltip="Reply"
-                >
-                  ⤶
-                </button>
-                <button
-                  class="action-btn"
-                  @click.stop="reactMessage"
-                  data-tooltip="React"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    fill="currentColor"
-                    class="bi bi-emoji-grin"
-                    viewBox="0 0 16 16"
-                  >
-                    <path
-                      d="M12.946 11.398A6.002 6.002 0 0 1 2.108 9.14c-.114-.595.426-1.068 1.028-.997C4.405 8.289 6.48 8.5 8 8.5s3.595-.21 4.864-.358c.602-.07 1.142.402 1.028.998a5.95 5.95 0 0 1-.946 2.258m-.078-2.25C11.588 9.295 9.539 9.5 8 9.5s-3.589-.205-4.868-.352c.11.468.286.91.517 1.317A37 37 0 0 0 8 10.75a37 37 0 0 0 4.351-.285c.231-.407.407-.85.517-1.317m-1.36 2.416c-1.02.1-2.255.186-3.508.186s-2.488-.086-3.507-.186A5 5 0 0 0 8 13a5 5 0 0 0 3.507-1.436ZM6.488 7c.114-.294.179-.636.179-1 0-1.105-.597-2-1.334-2C4.597 4 4 4.895 4 6c0 .364.065.706.178 1 .23-.598.662-1 1.155-1 .494 0 .925.402 1.155 1M12 6c0 .364-.065.706-.178 1-.23-.598-.662-1-1.155-1-.494 0-.925.402-1.155 1a2.8 2.8 0 0 1-.179-1c0-1.105.597-2 1.334-2C11.403 4 12 4.895 12 6"
-                    />
-                    <path
-                      d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m0-1A7 7 0 1 1 8 1a7 7 0 0 1 0 14"
-                    />
-                  </svg>
-                </button>
-              </div>
-              <span
-                class="d-inline-block p-2 rounded message"
-                :class="msg.sender === 'me' ? 'sent' : 'received'"
-              >
-                {{ msg.text }}
-              </span>
-
-              <div
-                v-if="hoveredMessage === index && msg.sender !== 'me'"
-                class="message-actions"
-              >
-                <button
-                  class="action-btn"
-                  @click.stop="reactMessage"
-                  data-tooltip="React"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    fill="currentColor"
-                    class="bi bi-emoji-grin"
-                    viewBox="0 0 16 16"
-                  >
-                    <path
-                      d="M12.946 11.398A6.002 6.002 0 0 1 2.108 9.14c-.114-.595.426-1.068 1.028-.997C4.405 8.289 6.48 8.5 8 8.5s3.595-.21 4.864-.358c.602-.07 1.142.402 1.028.998a5.95 5.95 0 0 1-.946 2.258m-.078-2.25C11.588 9.295 9.539 9.5 8 9.5s-3.589-.205-4.868-.352c.11.468.286.91.517 1.317A37 37 0 0 0 8 10.75a37 37 0 0 0 4.351-.285c.231-.407.407-.85.517-1.317m-1.36 2.416c-1.02.1-2.255.186-3.508.186s-2.488-.086-3.507-.186A5 5 0 0 0 8 13a5 5 0 0 0 3.507-1.436ZM6.488 7c.114-.294.179-.636.179-1 0-1.105-.597-2-1.334-2C4.597 4 4 4.895 4 6c0 .364.065.706.178 1 .23-.598.662-1 1.155-1 .494 0 .925.402 1.155 1M12 6c0 .364-.065.706-.178 1-.23-.598-.662-1-1.155-1-.494 0-.925.402-1.155 1a2.8 2.8 0 0 1-.179-1c0-1.105.597-2 1.334-2C11.403 4 12 4.895 12 6"
-                    />
-                    <path
-                      d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m0-1A7 7 0 1 1 8 1a7 7 0 0 1 0 14"
-                    />
-                  </svg>
-                </button>
-                <button
-                  class="action-btn"
-                  @click.stop="replyMessage"
-                  data-tooltip="Reply"
-                >
-                  ⤶
-                </button>
-                <button
-                  class="action-btn"
-                  @click.stop="openMessageMenu($event, msg)"
-                  data-tooltip="More"
-                >
-                  ⋮
-                </button>
+                <div v-if="hoveredMessage === index && msg.sender !== 'me'" class="message-actions">
+                  <button class="action-btn" @click.stop="reactMessage" data-tooltip="React">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                      class="bi bi-emoji-grin" viewBox="0 0 16 16">
+                      <path
+                        d="M12.946 11.398A6.002 6.002 0 0 1 2.108 9.14c-.114-.595.426-1.068 1.028-.997C4.405 8.289 6.48 8.5 8 8.5s3.595-.21 4.864-.358c.602-.07 1.142.402 1.028.998a5.95 5.95 0 0 1-.946 2.258m-.078-2.25C11.588 9.295 9.539 9.5 8 9.5s-3.589-.205-4.868-.352c.11.468.286.91.517 1.317A37 37 0 0 0 8 10.75a37 37 0 0 0 4.351-.285c.231-.407.407-.85.517-1.317m-1.36 2.416c-1.02.1-2.255.186-3.508.186s-2.488-.086-3.507-.186A5 5 0 0 0 8 13a5 5 0 0 0 3.507-1.436ZM6.488 7c.114-.294.179-.636.179-1 0-1.105-.597-2-1.334-2C4.597 4 4 4.895 4 6c0 .364.065.706.178 1 .23-.598.662-1 1.155-1 .494 0 .925.402 1.155 1M12 6c0 .364-.065.706-.178 1-.23-.598-.662-1-1.155-1-.494 0-.925.402-1.155 1a2.8 2.8 0 0 1-.179-1c0-1.105.597-2 1.334-2C11.403 4 12 4.895 12 6" />
+                      <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m0-1A7 7 0 1 1 8 1a7 7 0 0 1 0 14" />
+                    </svg>
+                  </button>
+                  <button class="action-btn" @click.stop="replyMessage" data-tooltip="Reply">
+                    ⤶
+                  </button>
+                  <button class="action-btn" @click.stop="openMessageMenu($event, msg)" data-tooltip="More">
+                    ⋮
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div v-if="selectedChat" class="p-3 border-top d-flex">
-          <textarea
-            v-model="newMessage"
-            @keydown="handleKeyPress"
-            @input="autoGrow"
-            ref="messageInput"
-            class="form-control me-2"
-            placeholder="Type a message..."
-            rows="1"
-          ></textarea>
+        </template>
+        <div v-if="selectedChat && !viewingContactInfo" class="p-3 border-top d-flex">
+          <textarea v-model="newMessage" @keydown="handleKeyPress" @input="autoGrow" ref="messageInput"
+            class="form-control me-2" placeholder="Type a message..." rows="1"></textarea>
           <button class="btn send-btn" @click="sendMessage">Send</button>
         </div>
       </div>
-      <div
-        v-if="messageMenu.visible"
-        class="message-menu"
-        :style="{ top: messageMenu.y + 'px', left: messageMenu.x + 'px' }"
-      >
+      <div v-if="messageMenu.visible" class="message-menu"
+        :style="{ top: messageMenu.y + 'px', left: messageMenu.x + 'px' }">
         <button @click="replyMessage">Reply</button>
         <button @click="copyMessage">Copy text</button>
         <button @click="reactMessage">React</button>
         <button @click="pinMessage">Pin message</button>
       </div>
     </div>
-    <HeaderMenu
-      :visible="headerMenu.visible"
-      :x="headerMenu.x"
-      :y="headerMenu.y"
-      :items="headerMenuItems"
-      @close="closeHeaderMenu"
-    />
+    <div v-if="showLogoutMessage" class="logout-toast">
+      Logging out...
+    </div>
+    <HeaderMenu :visible="headerMenu.visible" :x="headerMenu.x" :y="headerMenu.y" :items="headerMenuItems"
+      @close="closeHeaderMenu" />
   </div>
 </template>
 
@@ -338,6 +215,9 @@ export default {
   },
   data() {
     return {
+      viewingContactInfo: false,
+      contactInfoData: null,
+      showLogoutMessage: false,
       selectedChatForMenu: null,
       theme: "light",
       globalSearch: "",
@@ -370,7 +250,7 @@ export default {
           action: () => this.muteChat(this.selectedChatForMenu),
         },
         {
-          label: "📌 Pin Conversation",
+          label: "",
           action: () => this.pinChat(this.selectedChatForMenu),
         },
         {
@@ -394,9 +274,13 @@ export default {
         {
           id: 1,
           name: "John Doe",
-          avatar:
-            "https://i.pinimg.com/736x/10/ff/74/10ff74284ea2b3957b90b9556e05dce2.jpg",
+          avatar: "https://i.pinimg.com/736x/10/ff/74/10ff74284ea2b3957b90b9556e05dce2.jpg",
           lastMessage: "Hey!",
+          phone: "+1 555 123 4567",
+          pinned: false,
+          pinnedAt: null,
+          muted: false,
+          hidden: false,
           messages: [
             { sender: "other", text: "Hello!" },
             { sender: "me", text: "Hi there!" },
@@ -407,19 +291,79 @@ export default {
   },
   computed: {
     filteredChats() {
-      if (!this.globalSearch) return this.chats;
-      return this.chats.filter((c) =>
-        c.name.toLowerCase().includes(this.globalSearch.toLowerCase()),
-      );
+      const search = this.globalSearch.toLowerCase();
+
+      return this.sortedChats.filter(chat => {
+        const matchesSearch = chat.name.toLowerCase().includes(search);
+
+        if (this.globalSearch) {
+
+          return matchesSearch;
+        }
+
+        return !chat.hidden;
+      });
+    },
+
+    sortedChats() {
+      return [...this.chats].sort((a, b) => {
+        if (a.pinned && b.pinned) {
+          return a.pinnedAt - b.pinnedAt;
+        }
+        if (a.pinned) return -1;
+        if (b.pinned) return 1;
+
+        return 0;
+      });
     },
   },
   methods: {
+    selectChat(chat) {
+      chat.hidden = false;
+
+      this.selectedChat = chat;
+      this.selectedChatForMenu = chat;
+
+      this.globalSearch = "";
+
+      this.$nextTick(this.scrollToBottom);
+    },
+    closeChat(chat) {
+      if (!chat) return;
+
+      chat.hidden = true;
+
+      if (this.selectedChat?.id === chat.id) {
+        this.selectedChat = null;
+      }
+
+      this.closeHeaderMenu();
+    },
     openChatMenu(event, chat) {
       event.stopPropagation();
 
       const rect = event.currentTarget.getBoundingClientRect();
-
       this.selectedChatForMenu = chat;
+
+      const pinItem = this.headerMenuItems.find(i =>
+        i.action.toString().includes("pinChat")
+      );
+
+      const muteItem = this.headerMenuItems.find(i =>
+        i.action.toString().includes("muteChat")
+      );
+
+      if (muteItem) {
+        muteItem.label = chat.muted
+          ? "🔔 Unmute Notifications"
+          : "🔕 Mute Notifications";
+      }
+
+      if (pinItem) {
+        pinItem.label = chat.pinned
+          ? "📍 Unpin Conversation"
+          : "📌 Pin Conversation";
+      }
 
       this.headerMenu.visible = true;
       this.headerMenu.x = rect.right - 5;
@@ -435,6 +379,14 @@ export default {
       }
 
       const rect = event.currentTarget.getBoundingClientRect();
+      const pinItem = this.headerMenuItems.find(i =>
+        i.action.toString().includes("pinChat")
+      );
+      if (pinItem && this.selectedChatForMenu) {
+        pinItem.label = this.selectedChatForMenu.pinned
+          ? "📍 Unpin Conversation"
+          : "📌 Pin Conversation";
+      }
 
       this.headerMenu.visible = true;
       this.headerMenu.x = rect.right - 180;
@@ -445,28 +397,50 @@ export default {
       this.headerMenu.visible = false;
     },
 
-    contactInfo() {
-      alert("Contact info");
+    contactInfo(chat) {
+      if (!chat) return;
+      this.contactInfoData = chat;
+      this.viewingContactInfo = true;
       this.closeHeaderMenu();
     },
-    muteChat() {
-      alert("Muted");
+    muteChat(chat) {
+      if (!chat) return;
+
+      chat.muted = !chat.muted;
+
       this.closeHeaderMenu();
     },
-    pinChat() {
-      alert("Pinned");
+    pinChat(chat) {
+      if (!chat) return;
+
+      if (!chat.pinned) {
+        chat.pinned = true;
+        chat.pinnedAt = Date.now();
+      } else {
+        chat.pinned = false;
+        chat.pinnedAt = null;
+      }
+
       this.closeHeaderMenu();
     },
-    closeChat() {
-      this.selectedChat = null;
-      this.closeHeaderMenu();
+    closeContactInfo() {
+      this.viewingContactInfo = false;
+      this.contactInfoData = null;
     },
     blockUser() {
       alert("Blocked");
       this.closeHeaderMenu();
     },
-    deleteChat() {
-      alert("Deleted");
+    deleteChat(chat) {
+      if (!chat) return;
+      chat.messages = [];
+      chat.lastMessage = "";
+      chat.hidden = true;
+
+      if (this.selectedChat?.id === chat.id) {
+        this.selectedChat = null;
+      }
+
       this.closeHeaderMenu();
     },
     sharedMedia() {
@@ -474,7 +448,12 @@ export default {
       this.closeHeaderMenu();
     },
     logout() {
-      alert("Logging out...");
+      this.showLogoutMessage = true;
+
+      setTimeout(() => {
+        this.showLogoutMessage = false;
+        this.$router.replace("/login");
+      }, 2000);
     },
     autoGrow() {
       const el = this.$refs.messageInput;
@@ -514,10 +493,6 @@ export default {
     },
     toggleTheme() {
       this.theme = this.theme === "light" ? "dark" : "light";
-    },
-    selectChat(chat) {
-      this.selectedChat = chat;
-      this.$nextTick(this.scrollToBottom);
     },
     sendMessage() {
       if (!this.newMessage.trim()) return;
@@ -640,9 +615,10 @@ export default {
 }
 .contact-item:hover {
   background: rgba(0, 0, 0, 0.05);
+  background: rgba(255, 50, 50, 0.384);
 }
 .dark .contact-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 54, 54, 0.167);
 }
 .app-layout.light {
   background-color: #ffffff;
@@ -656,7 +632,7 @@ export default {
   color: white;
 }
 .app-layout.light .contact-item.active {
-  background: rgba(249, 83, 83, 0.83);
+  background: rgba(255, 60, 60, 0.83);
 }
 .app-layout.dark .contact-item.active {
   background: rgba(255, 0, 0, 0.212);
@@ -1192,5 +1168,67 @@ export default {
 
 .dark .contact-menu-btn {
   color: white;
+}
+
+.logout-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  background: rgba(255, 0, 0, 0.9);
+  color: #fff;
+
+  padding: 16px 28px;
+  border-radius: 10px;
+
+  font-weight: 600;
+  font-size: 1.1rem;
+  letter-spacing: 0.5px;
+
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
+
+  z-index: 9999;
+
+  animation: fadeInOut 1s ease forwards;
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  20% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+.pinned-icon svg {
+  filter: drop-shadow(0 0 1px currentColor);
+}
+
+.contact-info-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.contact-info-view img {
+  border: 3px solid #ff0000;
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
 }
 </style>
