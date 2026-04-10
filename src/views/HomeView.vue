@@ -88,17 +88,39 @@
         </div>
       </div>
       <div class="chat-area d-flex flex-column">
-        <div v-if="viewingContactInfo"
-          class="contact-info-view d-flex flex-column align-items-center justify-content-center p-5">
-          <img :src="contactInfoData.avatar" class="rounded-circle mb-3" width="50" height="50" />
-          <div class="fw-bold fs-5 mb-1">{{ contactInfoData.name }}</div>
-          <div class="text-muted fs-6 mb-1">
-            Last seen: {{ contactInfoData.lastSeen }}
-          </div>
-          <div class="text-muted fs-6">{{ contactInfoData.phone }}</div>
-          <button class="btn btn-outline-danger mt-4" @click="closeContactInfo">
-            Back
+        <div v-if="viewingContactInfo" class="contact-info-wrapper">
+
+          <button class="back-btn" @click="closeContactInfo">
+            ← Back
           </button>
+
+          <div class="contact-info-view d-flex flex-column align-items-center justify-content-center p-5">
+
+            <img :src="contactInfoData.avatar" class="rounded-circle mb-3" width="50" height="50" />
+            <div class="fw-bold fs-5 mb-1">{{ contactInfoData.name }}</div>
+            <div class="contact-meta fs-6 mb-1">
+              Last seen: {{ contactInfoData.lastSeen }}
+            </div>
+            <div class="contact-meta fs-6 mb-1">{{ contactInfoData.phone }}</div>
+
+            <div class="shared-media w-100">
+              <div class="fw-bold fs-5 mb-3">Shared Media</div>
+
+              <div class="media-grid">
+                <div v-for="media in sharedMedia" :key="media.id">
+
+                  <img v-if="media.type === 'image' || media.type === 'gif'" :src="media.url" class="media-item"
+                    @click="openLightbox(media)" />
+
+                  <video v-else-if="media.type === 'video'" class="media-item" @click="openLightbox(media)">
+                    <source :src="media.url" type="video/mp4" />
+                  </video>
+
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
 
         <template v-else>
@@ -178,9 +200,18 @@
           </div>
         </template>
         <div v-if="selectedChat && !viewingContactInfo" class="p-3 border-top d-flex">
-          <textarea v-model="newMessage" @keydown="handleKeyPress" @input="autoGrow" ref="messageInput"
-            class="form-control me-2" placeholder="Type a message..." rows="1"></textarea>
-          <button class="btn send-btn" @click="sendMessage">Send</button>
+
+          <div v-if="selectedChat.blocked" class="blocked-text w-100 text-center">
+            User is blocked
+          </div>
+
+          <template v-else>
+            <textarea v-model="newMessage" @keydown="handleKeyPress" @input="autoGrow" ref="messageInput"
+              class="form-control me-2" placeholder="Type a message..." rows="1"></textarea>
+
+            <button class="btn send-btn" @click="sendMessage">Send</button>
+          </template>
+
         </div>
       </div>
       <div v-if="messageMenu.visible" class="message-menu"
@@ -196,6 +227,24 @@
     </div>
     <HeaderMenu :visible="headerMenu.visible" :x="headerMenu.x" :y="headerMenu.y" :items="headerMenuItems"
       @close="closeHeaderMenu" />
+    <div v-if="lightbox.visible" class="lightbox" @click="closeLightbox">
+
+      <div class="lightbox-media-wrapper">
+
+        <div class="lightbox-close" @click.stop="closeLightbox">
+          ✕
+        </div>
+
+        <img v-if="lightbox.media?.type === 'image' || lightbox.media?.type === 'gif'" :src="lightbox.media?.url"
+          class="lightbox-content" />
+
+        <video v-else class="lightbox-content" controls autoplay>
+          <source :src="lightbox.media?.url" type="video/mp4" />
+        </video>
+
+      </div>
+
+    </div>
   </div>
 </template>
 
@@ -223,7 +272,12 @@ export default {
       globalSearch: "",
       newMessage: "",
       selectedChat: null,
+      activeChat: null,
       hoveredMessage: null,
+      lightbox: {
+        visible: false,
+        media: null,
+      },
       user: {
         name: "Your Name",
         avatar:
@@ -240,6 +294,43 @@ export default {
         x: 0,
         y: 0,
       },
+      sharedMedia: [
+        {
+          id: 1,
+          type: "image",
+          url: "https://i.pinimg.com/736x/77/36/82/77368296b7a80054a2277233d7bfbe0b.jpg"
+        },
+        {
+          id: 2,
+          type: "image",
+          url: "https://i.pinimg.com/736x/af/df/bc/afdfbcc120c6602097a0f9a7109214a5.jpg"
+        },
+        {
+          id: 3,
+          type: "gif",
+          url: "https://i.pinimg.com/originals/32/c3/a7/32c3a75b9d47ea321c108dc076708640.gif"
+        },
+        {
+          id: 4,
+          type: "image",
+          url: "https://i.pinimg.com/736x/4c/e0/0f/4ce00fd60c54afa644201398dc0533d4.jpg"
+        },
+        {
+          id: 5,
+          type: "image",
+          url: "https://i.pinimg.com/1200x/1a/1f/7a/1a1f7a9804716669cc2eb68bb80a1d24.jpg"
+        },
+        {
+          id: 6,
+          type: "image",
+          url: "https://i.pinimg.com/1200x/c6/01/e5/c601e591abec4594bb73db34b12eb812.jpg"
+        },
+        {
+          id: 7,
+          type: "video",
+          url: "https://cdn.discordapp.com/attachments/869655665575096410/1492082335359959040/PinLoad_ArpWire_TV_on_Instagram_24_Years_of_PlayStation_2_Today_marks_the_24th_annive_1775810540606.mp4?ex=69da0976&is=69d8b7f6&hm=89b3bce93e34b79d8a4c6cb45f35ac857a951ee8fe92188f905030fc770116f3&"
+        }
+      ],
       headerMenuItems: [
         {
           label: "👤 Contact Info",
@@ -267,7 +358,7 @@ export default {
         },
         {
           label: "🖼️ Shared Media",
-          action: () => this.sharedMedia(this.selectedChatForMenu),
+          action: () => this.openSharedMedia(this.selectedChatForMenu),
         },
       ],
       chats: [
@@ -281,6 +372,7 @@ export default {
           pinnedAt: null,
           muted: false,
           hidden: false,
+          blocked: false,
           messages: [
             { sender: "other", text: "Hello!" },
             { sender: "me", text: "Hi there!" },
@@ -318,13 +410,25 @@ export default {
     },
   },
   methods: {
+    openLightbox(media) {
+      this.lightbox.media = media;
+      this.lightbox.visible = true;
+    },
+
+    closeLightbox() {
+      this.lightbox.visible = false;
+      this.lightbox.media = null;
+    },
     selectChat(chat) {
       chat.hidden = false;
-
+      this.activeChat = chat;
       this.selectedChat = chat;
-      this.selectedChatForMenu = chat;
 
+      this.selectedChatForMenu = chat;
       this.globalSearch = "";
+
+      this.viewingContactInfo = false;
+      this.contactInfoData = null;
 
       this.$nextTick(this.scrollToBottom);
     },
@@ -352,6 +456,16 @@ export default {
       const muteItem = this.headerMenuItems.find(i =>
         i.action.toString().includes("muteChat")
       );
+
+      const blockItem = this.headerMenuItems.find(i =>
+        i.action.toString().includes("blockUser")
+      );
+
+      if (blockItem) {
+        blockItem.label = chat.blocked
+          ? "🔓 Unblock"
+          : "⛔ Block";
+      }
 
       if (muteItem) {
         muteItem.label = chat.muted
@@ -399,8 +513,11 @@ export default {
 
     contactInfo(chat) {
       if (!chat) return;
+
+      this.activeChat = chat;
       this.contactInfoData = chat;
       this.viewingContactInfo = true;
+
       this.closeHeaderMenu();
     },
     muteChat(chat) {
@@ -426,9 +543,20 @@ export default {
     closeContactInfo() {
       this.viewingContactInfo = false;
       this.contactInfoData = null;
+      if (this.activeChat) {
+        this.selectedChat = this.activeChat;
+      }
     },
-    blockUser() {
-      alert("Blocked");
+    blockUser(chat) {
+      if (!chat) return;
+
+      chat.blocked = !chat.blocked;
+
+      // optional UX behavior
+      if (chat.blocked && this.selectedChat?.id === chat.id) {
+        this.newMessage = "";
+      }
+
       this.closeHeaderMenu();
     },
     deleteChat(chat) {
@@ -443,8 +571,12 @@ export default {
 
       this.closeHeaderMenu();
     },
-    sharedMedia() {
-      alert("Media");
+    openSharedMedia(chat) {
+      if (!chat) return;
+      this.activeChat = chat;
+      this.contactInfoData = chat;
+      this.viewingContactInfo = true;
+
       this.closeHeaderMenu();
     },
     logout() {
@@ -495,11 +627,17 @@ export default {
       this.theme = this.theme === "light" ? "dark" : "light";
     },
     sendMessage() {
+      if (!this.selectedChat) return;
+
+      if (this.selectedChat.blocked) return;
+
       if (!this.newMessage.trim()) return;
+
       this.selectedChat.messages.push({
         sender: "me",
         text: this.newMessage,
       });
+
       this.newMessage = "";
       this.$nextTick(this.scrollToBottom);
     },
@@ -575,17 +713,20 @@ export default {
   transition: background-color 1.3s ease, color 1.3s ease,
     border-color 1.3s ease;
 }
+
 .app-body {
   flex: 1;
   display: flex;
   overflow: hidden;
   padding-left: 0;
 }
+
 .sidebar {
-  width: 320px;
+  width: 360px;
   display: flex;
   flex-direction: column;
 }
+
 .app-topbar {
   display: flex;
   align-items: center;
@@ -601,11 +742,13 @@ export default {
   padding: 12px;
   cursor: pointer;
 }
+
 .contacts {
   flex: 1;
   padding: 10px;
   overflow-y: auto;
 }
+
 .contact-item {
   display: flex;
   align-items: center;
@@ -613,13 +756,15 @@ export default {
   border-radius: 8px;
   cursor: pointer;
 }
+
 .contact-item:hover {
-  background: rgba(0, 0, 0, 0.05);
   background: rgba(255, 50, 50, 0.384);
 }
+
 .dark .contact-item:hover {
   background: rgba(255, 54, 54, 0.167);
 }
+
 .app-layout.light {
   background-color: #ffffff;
   border-color: #aa0f0f;
@@ -631,38 +776,48 @@ export default {
   border-color: #ff9e9e;
   color: white;
 }
+
 .app-layout.light .contact-item.active {
   background: rgba(255, 60, 60, 0.83);
 }
+
 .app-layout.dark .contact-item.active {
   background: rgba(255, 0, 0, 0.212);
 }
+
 .chat-area {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
+
 .messages {
   overflow-y: auto;
 }
+
 .message {
   word-break: break-word;
   overflow-wrap: break-word;
   white-space: pre-wrap;
   max-width: 60ch;
 }
+
 .light .sent {
   background: #ff0000;
   color: white;
 }
+
 .light .received {
   background: #e9ecef;
   color: black;
 }
+
 .dark .sent {
   background: #ff0000;
   color: white;
 }
+
 .dark .received {
   background: #2a2a2a;
   color: white;
@@ -675,6 +830,7 @@ export default {
 .dark .chat-area {
   background: #181818;
 }
+
 .light .sidebar {
   background: #ffffff;
 }
@@ -690,25 +846,31 @@ export default {
 .dark .app-topbar {
   background: #1e1e1e;
 }
+
 .dark .search-input {
   background: #ff00003c;
   color: white;
   border: 1px solid #ff0000;
 }
+
 .dark .search-input::placeholder {
   color: white;
   opacity: 1;
 }
+
 .theme-action-btn {
   border: none;
   color: white;
 }
+
 .light .theme-action-btn {
   background-color: #ff0000;
 }
+
 .dark .theme-action-btn {
   background-color: rgba(255, 0, 25, 0.314);
 }
+
 .theme-btn {
   all: unset;
   cursor: pointer;
@@ -741,6 +903,7 @@ export default {
 .theme-btn:hover svg {
   transform: scale(1.2) rotate(20deg);
 }
+
 .theme-btn {
   position: relative;
 }
@@ -748,6 +911,7 @@ export default {
 .theme-btn:hover span.sun {
   transform: scale(1.05) rotate(20deg);
 }
+
 .theme-btn::after {
   content: attr(data-tooltip);
   position: absolute;
@@ -778,51 +942,63 @@ export default {
 .logout-btn:hover svg {
   transform: scale(1.2);
 }
+
 .app-layout.dark .theme-btn span {
   color: white;
   font-size: 2.5rem;
 }
+
 .avatar-border {
   border: 2px solid #ff0000;
   box-shadow: 0 0 6px rgba(255, 0, 0, 0.4);
 }
+
 .send-btn {
   background-color: #ff0000;
   color: white;
   border: 1px solid #ff0000;
   transition: all 1.3s ease;
 }
+
 .send-btn:hover {
   background-color: #cc0000;
   border-color: #cc0000;
   color: white;
 }
+
 .form-control {
   transition: all 1.3s ease;
 }
+
 .light .form-control {
   background: white;
   color: black;
   border: 1px solid #ced4da;
 }
+
 .dark .form-control {
   background: #ff00003c;
   color: white;
   border: 1px solid #ff0000;
 }
+
 .dark .form-control::placeholder {
   color: #ffffff;
   opacity: 1;
 }
+
 .dark .profile-section .text-muted {
   color: white !important;
 }
+
 .dark .contact-item .text-muted {
   color: white !important;
 }
+
 .dark .chat-header .text-muted {
   color: white !important;
 }
+
 .app-layout {
   width: 100%;
   height: 100vh;
@@ -838,19 +1014,24 @@ export default {
 .app-layout.light .search-input {
   color: black;
 }
+
 .app-layout.light .search-input::placeholder {
   color: #000000;
   opacity: 1;
 }
+
 .app-layout.light .chat-header .text-muted {
   color: black !important;
 }
+
 .app-layout.light .contact-item .text-muted {
   color: black !important;
 }
+
 .app-layout.light .profile-section .text-muted {
   color: black !important;
 }
+
 .message-wrapper {
   position: relative;
   display: inline-block;
@@ -916,6 +1097,7 @@ export default {
 .message-menu button:hover {
   background: rgba(0, 0, 0, 0.05);
 }
+
 .bg-video {
   position: fixed;
   top: 0;
@@ -925,6 +1107,7 @@ export default {
   object-fit: cover;
   z-index: -1;
 }
+
 .dark .profile-section .fw-bold {
   color: white;
 }
@@ -932,11 +1115,13 @@ export default {
 .light .profile-section .fw-bold {
   color: black;
 }
+
 .form-control:focus {
   outline: none;
   border-color: #ff0000;
   box-shadow: 0 0 0 0.2rem rgba(255, 0, 0, 0.25);
 }
+
 .message-actions {
   display: flex;
   align-items: center;
@@ -954,6 +1139,7 @@ export default {
   padding: 2px;
   transition: transform 0.15s ease, opacity 0.15s ease;
 }
+
 .light .action-btn {
   color: black;
 }
@@ -961,6 +1147,7 @@ export default {
 .dark .action-btn {
   color: white;
 }
+
 .action-btn:hover {
   transform: scale(1.2);
   opacity: 1;
@@ -986,12 +1173,15 @@ export default {
 .action-btn:hover::after {
   opacity: 1;
 }
+
 .action-btn[data-tooltip="More"] {
   font-size: 20px;
 }
+
 .flex-spacer {
-  width: 157px;
+  width: 227px;
 }
+
 .chat-header-actions {
   display: flex;
   align-items: center;
@@ -1019,9 +1209,11 @@ export default {
 .header-icon:hover {
   transform: scale(1.1);
 }
+
 .header-icon {
   position: relative;
 }
+
 .header-icon::after {
   content: attr(data-tooltip);
   position: absolute;
@@ -1042,6 +1234,7 @@ export default {
 .header-icon:hover::after {
   opacity: 1;
 }
+
 .light .header-icon {
   color: rgb(0, 0, 0);
 }
@@ -1049,6 +1242,7 @@ export default {
 .dark .header-icon {
   color: white;
 }
+
 .header-menu {
   position: fixed;
   background: white;
@@ -1087,6 +1281,7 @@ export default {
 .dark .header-menu button:hover {
   background: rgba(255, 255, 255, 0.1);
 }
+
 .dropdown-enter-active,
 .dropdown-leave-active {
   transition: all 0.15s ease;
@@ -1110,6 +1305,7 @@ export default {
   opacity: 0;
   transform: translateY(-6px) scale(0.95);
 }
+
 .header-menu {
   position: fixed;
   background: white;
@@ -1219,16 +1415,175 @@ export default {
 }
 
 .contact-info-view {
-  flex: 1;
+  width: 100%;
+  min-height: 100%;
+
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   text-align: center;
+  position: relative;
+  justify-content: flex-start;
+  padding-top: 60px;
+  padding-bottom: 60px;
 }
 
-.contact-info-view img {
+.contact-info-view img,
+.contact-info-view video {
   border: 3px solid #ff0000;
   box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+}
+
+.shared-media {
+  width: 100%;
+}
+
+.media-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.media-item {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 12px;
+
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  will-change: transform;
+}
+
+.media-item:hover {
+  transform: scale(1.06);
+  box-shadow: 0 10px 25px rgba(255, 0, 0, 0.35);
+  z-index: 2;
+}
+
+.media-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.back-btn {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  z-index: 9999;
+  background: transparent;
+  border: 2px solid #ff0000;
+  color: #ff0000;
+
+  padding: 6px 12px;
+  border-radius: 8px;
+
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+  background: rgba(255, 0, 0, 0.1);
+}
+
+.contact-info-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.lightbox {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  z-index: 99999;
+
+  animation: fadeIn 0.25s ease;
+}
+
+.lightbox-content {
+  display: block;
+  max-width: 90vw;
+  max-height: 90vh;
+  border-radius: 12px;
+  transform: scale(0.9);
+  animation: zoomIn 0.25s ease forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes zoomIn {
+  to {
+    transform: scale(1);
+  }
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+
+  width: 40px;
+  height: 40px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 24px;
+  color: white;
+
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+
+  cursor: pointer;
+
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.lightbox-close:hover {
+  transform: scale(1.1);
+  background: rgba(255, 0, 0, 0.6);
+}
+
+.lightbox-media-wrapper {
+  position: relative;
+  display: inline-block;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+.light .contact-meta {
+  color: black;
+}
+
+.dark .contact-meta {
+  color: white;
+  opacity: 0.8;
+}
+
+.blocked-text {
+  color: red;
+  font-weight: bold;
+  padding: 10px;
 }
 </style>
