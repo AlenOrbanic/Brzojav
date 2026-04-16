@@ -133,9 +133,42 @@
             </div>
 
             <div v-else class="text-muted">Select a conversation</div>
-
             <div v-if="selectedChat" class="chat-header-actions">
-              <button class="header-icon" data-tooltip="Search">
+              <div v-if="searchActive" class="chat-search-bar">
+                <div class="search-left">
+                  <span class="search-count">
+                    {{ searchResults.length }} results
+                  </span>
+
+                  <button @click="prevResult" data-tooltip="Previous" class="icon-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                      viewBox="0 0 16 16">
+                      <path fill-rule="evenodd"
+                        d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8" />
+                    </svg>
+                  </button>
+
+                  <button @click="nextResult" data-tooltip="Next" class="icon-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                      viewBox="0 0 16 16">
+                      <path fill-rule="evenodd"
+                        d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8" />
+                    </svg>
+                  </button>
+
+                  <button @click="closeSearch" data-tooltip="Clear search" class="icon-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                      class="bi bi-x-lg" viewBox="0 0 16 16">
+                      <path
+                        d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z" />
+                    </svg>
+                  </button>
+                </div>
+
+                <input v-model="chatSearchQuery" @input="searchMessages" type="text" placeholder="Search messages..."
+                  class="form-control search-input-inner" />
+              </div>
+              <button class="header-icon" @click="toggleChatSearch" data-tooltip="Search in chat">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-search"
                   viewBox="0 0 16 16">
                   <path
@@ -175,7 +208,11 @@
                     </svg>
                   </button>
                 </div>
-                <span class="d-inline-block p-2 rounded message" :class="msg.sender === 'me' ? 'sent' : 'received'">
+                <span class="d-inline-block p-2 rounded message" :class="[
+                  msg.sender === 'me' ? 'sent' : 'received',
+                  isMessageMatched(index) ? 'highlighted' : '',
+                  isCurrentMatch(index) ? 'active-highlight' : ''
+                ]">
                   {{ msg.text }}
                 </span>
 
@@ -278,6 +315,10 @@ export default {
         visible: false,
         media: null,
       },
+      searchActive: false,
+      chatSearchQuery: "",
+      searchResults: [],
+      currentSearchIndex: 0,
       user: {
         name: "Your Name",
         avatar:
@@ -410,6 +451,76 @@ export default {
     },
   },
   methods: {
+    isCurrentMatch(index) {
+      return this.searchResults[this.currentSearchIndex]?.index === index;
+    },
+    isMessageMatched(index) {
+      return this.searchResults.some(r => r.index === index);
+    },
+    toggleChatSearch() {
+      this.searchActive = !this.searchActive;
+
+      if (!this.searchActive) {
+        this.closeSearch();
+      }
+    },
+
+    closeSearch() {
+      this.searchActive = false;
+      this.chatSearchQuery = "";
+      this.searchResults = [];
+      this.currentSearchIndex = 0;
+    },
+
+    searchMessages() {
+      if (!this.selectedChat) return;
+
+      const query = this.chatSearchQuery.toLowerCase();
+
+      this.searchResults = this.selectedChat.messages
+        .map((msg, index) => ({ ...msg, index }))
+        .filter(msg => msg.text.toLowerCase().includes(query));
+
+      this.currentSearchIndex = 0;
+
+      this.scrollToMatch();
+    },
+
+    nextResult() {
+      if (!this.searchResults.length) return;
+
+      this.currentSearchIndex =
+        (this.currentSearchIndex + 1) % this.searchResults.length;
+
+      this.scrollToMatch();
+    },
+
+    prevResult() {
+      if (!this.searchResults.length) return;
+
+      this.currentSearchIndex =
+        (this.currentSearchIndex - 1 + this.searchResults.length) %
+        this.searchResults.length;
+
+      this.scrollToMatch();
+    },
+    scrollToMatch() {
+      this.$nextTick(() => {
+        const index = this.searchResults[this.currentSearchIndex]?.index;
+
+        if (index == null) return;
+
+        const messages = this.$refs.messagesBox.children;
+
+        const el = messages[index];
+        if (el) {
+          el.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+      });
+    },
     openLightbox(media) {
       this.lightbox.media = media;
       this.lightbox.visible = true;
@@ -485,6 +596,7 @@ export default {
     },
 
     toggleHeaderMenu(event) {
+      this.selectedChatForMenu = this.selectedChat;
       event.stopPropagation();
 
       if (this.headerMenu.visible) {
@@ -493,13 +605,37 @@ export default {
       }
 
       const rect = event.currentTarget.getBoundingClientRect();
+
       const pinItem = this.headerMenuItems.find(i =>
         i.action.toString().includes("pinChat")
       );
-      if (pinItem && this.selectedChatForMenu) {
-        pinItem.label = this.selectedChatForMenu.pinned
-          ? "📍 Unpin Conversation"
-          : "📌 Pin Conversation";
+
+      const blockItem = this.headerMenuItems.find(i =>
+        i.action.toString().includes("blockUser")
+      );
+
+      const muteItem = this.headerMenuItems.find(i =>
+        i.action.toString().includes("muteChat")
+      );
+
+      if (this.selectedChatForMenu) {
+        if (pinItem) {
+          pinItem.label = this.selectedChatForMenu.pinned
+            ? "📍 Unpin Conversation"
+            : "📌 Pin Conversation";
+        }
+
+        if (blockItem) {
+          blockItem.label = this.selectedChatForMenu.blocked
+            ? "🔓 Unblock"
+            : "⛔ Block";
+        }
+
+        if (muteItem) {
+          muteItem.label = this.selectedChatForMenu.muted
+            ? "🔔 Unmute Notifications"
+            : "🔕 Mute Notifications";
+        }
       }
 
       this.headerMenu.visible = true;
@@ -595,6 +731,14 @@ export default {
     handleKeyDown(event) {
       if (event.key === "Escape") {
         this.closeMessageMenu();
+      }
+
+      // 🔍 ENTER navigation for search
+      if (this.searchActive && this.searchResults.length) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          this.nextResult();
+        }
       }
     },
     handleClickOutside(event) {
@@ -1199,7 +1343,11 @@ export default {
 }
 
 .light .header-icon:hover {
-  background: rgba(255, 0, 0, 0.5);
+  background: rgba(255, 0, 0);
+}
+
+.dark .chat-search-bar button:hover {
+  background: rgba(255, 0, 0, 0.3);
 }
 
 .dark .header-icon:hover {
@@ -1585,5 +1733,110 @@ export default {
   color: red;
   font-weight: bold;
   padding: 10px;
+}
+
+.highlighted {
+  outline: 3px solid rgb(247, 0, 255);
+}
+
+.chat-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.search-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.search-input-inner {
+  flex: 1;
+  max-width: 200px;
+}
+
+.chat-search-bar button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.chat-search-bar button:hover {
+  background: rgb(255, 0, 0);
+}
+
+.chat-search-bar button {
+  position: relative;
+}
+
+.chat-search-bar button::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: 130%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: black;
+  color: white;
+  font-size: 12px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.chat-search-bar button:hover::after {
+  opacity: 1;
+}
+
+@keyframes pulseHighlight {
+  0% {
+    outline-color: rgb(0, 200, 255);
+  }
+
+  50% {
+    outline-color: rgb(255, 0, 255);
+  }
+
+  100% {
+    outline-color: rgb(0, 200, 255);
+  }
+}
+
+.active-highlight {
+  outline: 3px solid rgb(255, 0, 217);
+  animation: pulseHighlight 1s infinite ease-in-out;
+  box-shadow: 0 0 8px rgb(255, 0, 191);
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+
+.icon-btn:hover {
+  transform: scale(1.15);
+}
+
+.light .icon-btn {
+  color: black;
+}
+
+.dark .icon-btn {
+  color: white;
 }
 </style>
