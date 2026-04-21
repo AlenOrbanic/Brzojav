@@ -185,6 +185,10 @@
               </button>
             </div>
           </div>
+          <div v-if="pinnedMessage" class="pinned-bar" @click="scrollToPinned">
+            📌 <span class="pinned-text">{{ pinnedMessage.text }}</span>
+            <button class="unpin-btn" @click.stop="pinnedMessage = null">✕</button>
+          </div>
           <div ref="messagesBox" class="messages flex-grow-1 p-3">
             <div v-for="(msg, index) in selectedChat?.messages || []" :key="index" class="mb-2"
               :class="msg.sender === 'me' ? 'text-end' : 'text-start'">
@@ -199,7 +203,7 @@
                   <button class="action-btn" @click.stop="replyMessage" data-tooltip="Reply">
                     ⤶
                   </button>
-                  <button class="action-btn" @click.stop="reactMessage" data-tooltip="React">
+                  <button class="action-btn" @click.stop="reactMessage($event, msg)" data-tooltip="React">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                       class="bi bi-emoji-grin" viewBox="0 0 16 16">
                       <path
@@ -208,16 +212,29 @@
                     </svg>
                   </button>
                 </div>
-                <span class="d-inline-block p-2 rounded message" :class="[
-                  msg.sender === 'me' ? 'sent' : 'received',
-                  isMessageMatched(index) ? 'highlighted' : '',
-                  isCurrentMatch(index) ? 'active-highlight' : ''
+                <div class="message-bubble-wrap" :class="[
+                  msg.sender === 'me' ? 'bubble-me' : 'bubble-other',
+                  msg.reactions && msg.reactions.length ? 'has-reaction' : ''
                 ]">
-                  {{ msg.text }}
-                </span>
-
+                  <span class="d-inline-block p-2 rounded message" :class="[
+                    msg.sender === 'me' ? 'sent' : 'received',
+                    isMessageMatched(index) ? 'highlighted' : '',
+                    isCurrentMatch(index) ? 'active-highlight' : ''
+                  ]">
+                    {{ msg.text }}
+                  </span>
+                  <div v-if="msg.reactions && msg.reactions.length" class="reaction-row"
+                    :class="msg.sender === 'me' ? 'reaction-row-me' : 'reaction-row-other'">
+                    <div v-for="(reaction, ri) in msg.reactions" :key="ri" class="reaction-chip"
+                      :class="{ 'reaction-chip-mine': reaction.sender === 'me' }"
+                      @click="removeReaction(msg, reaction)">
+                      <img :src="reaction.avatar" class="reaction-avatar" />
+                      <span>{{ reaction.emoji }}</span>
+                    </div>
+                  </div>
+                </div>
                 <div v-if="hoveredMessage === index && msg.sender !== 'me'" class="message-actions">
-                  <button class="action-btn" @click.stop="reactMessage" data-tooltip="React">
+                  <button class="action-btn" @click.stop="reactMessage($event, msg)" data-tooltip="React">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
                       class="bi bi-emoji-grin" viewBox="0 0 16 16">
                       <path
@@ -257,6 +274,8 @@
         <button @click="copyMessage">Copy text</button>
         <button @click="reactMessage">React</button>
         <button @click="pinMessage">Pin message</button>
+        <button @click="deleteMessage" v-if="messageMenu.message?.sender === 'me'" style="color: red;">Delete
+          message</button>
       </div>
     </div>
     <div v-if="showLogoutMessage" class="logout-toast">
@@ -278,18 +297,20 @@
         <video v-else class="lightbox-content" controls autoplay>
           <source :src="lightbox.media?.url" type="video/mp4" />
         </video>
-
       </div>
-
     </div>
+    <EmojiPicker v-if="emojiPicker.visible" :theme="theme"
+      :style="{ top: emojiPicker.y + 'px', left: emojiPicker.x + 'px', position: 'fixed' }" @select="pickEmoji"
+      @close="emojiPicker.visible = false" />
   </div>
 </template>
 
 <script>
 import HeaderMenu from "../components/HeaderMenu.vue";
+import EmojiPicker from "../components/EmojiPicker.vue";
 export default {
   components: {
-    HeaderMenu,
+    HeaderMenu, EmojiPicker
   },
   mounted() {
     document.addEventListener("click", this.handleClickOutside);
@@ -311,6 +332,8 @@ export default {
       selectedChat: null,
       activeChat: null,
       hoveredMessage: null,
+      pinnedMessage: null,
+      pendingReactMessage: null,
       lightbox: {
         visible: false,
         media: null,
@@ -420,6 +443,7 @@ export default {
           ],
         },
       ],
+      emojiPicker: { visible: false, x: 0, y: 0 },
     };
   },
   computed: {
@@ -451,6 +475,15 @@ export default {
     },
   },
   methods: {
+    scrollToPinned() {
+      if (!this.pinnedMessage || !this.selectedChat) return;
+      const index = this.selectedChat.messages.indexOf(this.pinnedMessage);
+      if (index === -1) return;
+      this.$nextTick(() => {
+        const el = this.$refs.messagesBox?.children[index];
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    },
     isCurrentMatch(index) {
       return this.searchResults[this.currentSearchIndex]?.index === index;
     },
@@ -464,7 +497,6 @@ export default {
         this.closeSearch();
       }
     },
-
     closeSearch() {
       this.searchActive = false;
       this.chatSearchQuery = "";
@@ -825,14 +857,52 @@ export default {
       this.newMessage = `> ${this.messageMenu.message.text}\n`;
       this.closeMessageMenu();
     },
-
-    reactMessage() {
-      alert("React feature placeholder");
+    reactMessage(event, msg) {
+      const target = msg || this.messageMenu.message;
+      if (!target) return;
+      this.pendingReactMessage = target;
+      this.closeMessageMenu();
+      this.$nextTick(() => {
+        const x = event?.clientX || window.innerWidth / 2;
+        const y = event?.clientY || window.innerHeight / 2;
+        this.emojiPicker.x = Math.min(x - 30, window.innerWidth - 320);
+        this.emojiPicker.y = Math.min(y + 10, window.innerHeight - 80);
+        this.emojiPicker.visible = true;
+      });
+    },
+    pickEmoji(emoji) {
+      const msg = this.pendingReactMessage;
+      if (!msg) return;
+      msg.reactions = (msg.reactions || []).filter(r => r.sender !== 'me');
+      msg.reactions.push({ emoji, sender: 'me', avatar: this.user.avatar });
+      this.pendingReactMessage = null;
+      this.emojiPicker.visible = false;
+    },
+    removeReaction(msg, reaction) {
+      if (reaction.sender !== 'me') return;
+      msg.reactions = msg.reactions.filter(r => r !== reaction);
+    },
+    pinMessage() {
+      if (!this.messageMenu.message) return;
+      if (this.pinnedMessage === this.messageMenu.message) {
+        this.pinnedMessage = null;
+      } else {
+        this.pinnedMessage = this.messageMenu.message;
+      }
       this.closeMessageMenu();
     },
-
-    pinMessage() {
-      alert("Pin feature placeholder");
+    deleteMessage() {
+      if (!this.messageMenu.message || !this.selectedChat) return;
+      if (this.messageMenu.message.sender !== 'me') return;
+      const index = this.selectedChat.messages.indexOf(this.messageMenu.message);
+      if (index !== -1) {
+        this.selectedChat.messages.splice(index, 1);
+        // Update lastMessage preview in sidebar
+        const msgs = this.selectedChat.messages;
+        this.selectedChat.lastMessage = msgs.length
+          ? msgs[msgs.length - 1].text
+          : "";
+      }
       this.closeMessageMenu();
     },
     goToProfile() {
@@ -934,6 +1004,7 @@ export default {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
 }
 
 .messages {
@@ -1838,5 +1909,147 @@ export default {
 
 .dark .icon-btn {
   color: white;
+}
+
+.pinned-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-bottom: 1px solid rgba(255, 0, 0, 0.3);
+  cursor: pointer;
+  font-size: 14px;
+  flex-shrink: 0;
+  overflow: hidden;
+  min-width: 0;
+  max-height: 36px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.light .pinned-bar {
+  background: rgba(255, 0, 0, 0.07);
+  color: black;
+}
+
+.dark .pinned-bar {
+  background: rgba(255, 0, 0, 0.12);
+  color: white;
+}
+
+.pinned-bar:hover {
+  background: rgba(255, 0, 0, 0.18);
+}
+
+.pinned-text {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.unpin-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.15s ease;
+}
+
+.light .unpin-btn {
+  color: black;
+}
+
+.dark .unpin-btn {
+  color: white;
+}
+
+.unpin-btn:hover {
+  opacity: 1;
+}
+
+.message-bubble-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  position: relative;
+  max-width: 60ch;
+}
+
+.message-bubble-wrap.has-reaction .message {
+  margin-bottom: 20px;
+}
+
+.reaction-row {
+  position: absolute;
+  bottom: 4px;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 3px;
+  z-index: 1;
+}
+
+.reaction-row-me {
+  right: 0;
+}
+
+.reaction-row-other {
+  left: 0;
+}
+
+.reaction-chip {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 20px;
+  padding: 2px 5px;
+  font-size: 13px;
+  cursor: default;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.light .reaction-chip {
+  background: #fff;
+  border: 1px solid rgba(255, 0, 0, 0.3);
+  color: black;
+}
+
+.dark .reaction-chip {
+  background: #2a2a2a;
+  border: 1px solid rgba(255, 0, 0, 0.4);
+  color: white;
+}
+
+.reaction-chip-mine {
+  cursor: pointer;
+}
+
+.light .reaction-chip-mine:hover {
+  background: rgba(255, 0, 0, 0.1);
+}
+
+.dark .reaction-chip-mine:hover {
+  background: rgba(255, 0, 0, 0.25);
+}
+
+.reaction-avatar {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 0, 0, 0.4);
+  flex-shrink: 0;
+}
+
+.reaction-chip-mine {
+  cursor: pointer;
+}
+
+.reaction-chip-mine:hover {
+  background: rgba(255, 0, 0, 0.25);
 }
 </style>
