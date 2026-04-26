@@ -90,71 +90,195 @@
         </div>
         <div class="px-2 py-1">
           <button
-            class="btn w-100 theme-action-btn"
+            class="btn w-100 theme-action-btn action-btn-hover"
             @click="createConversation"
           >
-            + New Chat / Group
+            {{ showNewChatMenu ? "← Back" : "+ New Chat / Group" }}
           </button>
         </div>
         <div class="contacts">
-          <div
-            v-for="chat in filteredChats"
-            :key="chat.id"
-            class="contact-item d-flex justify-content-between align-items-center"
-            :class="{ active: selectedChat?.id === chat.id }"
-            @click="selectChat(chat)"
-          >
-            <div class="d-flex align-items-center flex-grow-1">
-              <img
-                :src="chat.avatar"
-                class="rounded-circle me-2 avatar-border"
-                width="40"
-                height="40"
-              />
-              <div class="flex-grow-1">
-                <div class="fw-semibold">
-                  {{ chat.name }}
-                  <span v-if="chat.pinned" class="pinned-icon">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      fill="currentColor"
-                      class="bi bi-pin"
-                      viewBox="0 0 16 16"
-                    >
-                      <path
-                        d="M4.146.146A.5.5 0 0 1 4.5 0h7a.5.5 0 0 1 .5.5c0 .68-.342 1.174-.646 1.479-.126.125-.25.224-.354.298v4.431l.078.048c.203.127.476.314.751.555C12.36 7.775 13 8.527 13 9.5a.5.5 0 0 1-.5.5h-4v4.5c0 .276-.224 1.5-.5 1.5s-.5-1.224-.5-1.5V10h-4a.5.5 0 0 1-.5-.5c0-.973.64-1.725 1.17-2.189A6 6 0 0 1 5 6.708V2.277a3 3 0 0 1-.354-.298C4.342 1.674 4 1.179 4 .5a.5.5 0 0 1 .146-.354m1.58 1.408-.002-.001zm-.002-.001.002.001A.5.5 0 0 1 6 2v5a.5.5 0 0 1-.276.447h-.002l-.012.007-.054.03a5 5 0 0 0-.827.58c-.318.278-.585.596-.725.936h7.792c-.14-.34-.407-.658-.725-.936a5 5 0 0 0-.881-.61l-.012-.006h-.002A.5.5 0 0 1 10 7V2a.5.5 0 0 1 .295-.458 1.8 1.8 0 0 0 .351-.271c.08-.08.155-.17.214-.271H5.14q.091.15.214.271a1.8 1.8 0 0 0 .37.282"
-                      />
-                    </svg>
-                  </span>
-                  <span v-if="chat.muted" class="pinned-icon">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      fill="currentColor"
-                      class="bi bi-bell-slash"
-                      viewBox="0 0 16 16"
-                    >
-                      <path
-                        d="M5.164 14H15c-.299-.199-.557-.553-.78-1-.9-1.8-1.22-5.12-1.22-6q0-.396-.06-.776l-.938.938c.02.708.157 2.154.457 3.58.161.767.377 1.566.663 2.258H6.164zm5.581-9.91a4 4 0 0 0-1.948-1.01L8 2.917l-.797.161A4 4 0 0 0 4 7c0 .628-.134 2.197-.459 3.742q-.075.358-.166.718l-1.653 1.653q.03-.055.059-.113C2.679 11.2 3 7.88 3 7c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0c.942.19 1.788.645 2.457 1.284zM10 15a2 2 0 1 1-4 0zm-9.375.625a.53.53 0 0 0 .75.75l14.75-14.75a.53.53 0 0 0-.75-.75z"
-                      />
-                    </svg>
-                  </span>
-                </div>
-                <small class="text-muted d-block text-truncate">
-                  {{ chat.lastMessage }}
-                </small>
+          <template v-if="showNewChatMenu">
+            <template v-if="showNewContactView">
+              <div class="new-contact-view px-2 pt-2">
+                <input
+                  v-model="newContactSearch"
+                  type="text"
+                  class="form-control mb-3"
+                  placeholder="Search @username"
+                />
+                <button
+                  class="btn theme-action-btn send-invite-btn action-btn-hover"
+                >
+                  Send invite
+                </button>
               </div>
-            </div>
-            <button
-              class="contact-menu-btn"
-              @click.stop="openChatMenu($event, chat)"
+            </template>
+            <template v-else-if="showNewGroupView">
+              <div class="new-contact-view px-2 pt-2">
+                <input
+                  v-model="groupSearch"
+                  type="text"
+                  class="form-control mb-2"
+                  placeholder="Search @username"
+                />
+                <button
+                  class="btn theme-action-btn send-invite-btn action-btn-hover mb-2"
+                  :disabled="selectedGroupMembers.length < 2"
+                  @click="createGroup"
+                >
+                  Create group
+                </button>
+                <div class="group-member-list">
+                  <div
+                    v-for="chat in filteredGroupChats"
+                    :key="chat.id"
+                    class="contact-item d-flex align-items-center"
+                    @click="toggleGroupMember(chat)"
+                  >
+                    <img
+                      :src="chat.avatar"
+                      class="rounded-circle me-2 avatar-border"
+                      width="40"
+                      height="40"
+                    />
+                    <div class="flex-grow-1">
+                      <div class="fw-semibold">{{ chat.name }}</div>
+                    </div>
+                    <div
+                      class="group-select-circle"
+                      :class="{ selected: selectedGroupMembers.includes(chat) }"
+                    >
+                      <svg
+                        v-if="selectedGroupMembers.includes(chat)"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="14"
+                        height="14"
+                        fill="currentColor"
+                        viewBox="0 0 16 16"
+                      >
+                        <path
+                          d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0z"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+            <template v-else>
+              <div
+                class="contact-item d-flex justify-content-between align-items-center"
+                @click="showNewContactView = true"
+              >
+                <div class="d-flex align-items-center flex-grow-1">
+                  <div class="new-chat-icon-wrap me-2">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      fill="currentColor"
+                      class="bi bi-person-fill-add"
+                      viewBox="0 0 16 16"
+                    >
+                      <path
+                        d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m.5-5v1h1a.5.5 0 0 1 0 1h-1v1a.5.5 0 0 1-1 0v-1h-1a.5.5 0 0 1 0-1h1v-1a.5.5 0 0 1 1 0m-2-6a3 3 0 1 1-6 0 3 3 0 0 1 6 0"
+                      />
+                      <path
+                        d="M2 13c0 1 1 1 1 1h5.256A4.5 4.5 0 0 1 8 12.5a4.5 4.5 0 0 1 1.544-3.393Q8.844 9.002 8 9c-5 0-6 3-6 4"
+                      />
+                    </svg>
+                  </div>
+                  <div class="flex-grow-1">
+                    <div class="fw-semibold">New contact</div>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="contact-item d-flex justify-content-between align-items-center"
+                @click="showNewGroupView = true"
+              >
+                <div class="d-flex align-items-center flex-grow-1">
+                  <div class="new-chat-icon-wrap me-2">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      fill="currentColor"
+                      class="bi bi-people-fill"
+                      viewBox="0 0 16 16"
+                    >
+                      <path
+                        d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6m-5.784 6A2.24 2.24 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.3 6.3 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1zM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"
+                      />
+                    </svg>
+                  </div>
+                  <div class="flex-grow-1">
+                    <div class="fw-semibold">New group</div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </template>
+          <template v-else>
+            <div
+              v-for="chat in filteredChats"
+              :key="chat.id"
+              class="contact-item d-flex justify-content-between align-items-center"
+              :class="{ active: selectedChat?.id === chat.id }"
+              @click="selectChat(chat)"
             >
-              ⋯
-            </button>
-          </div>
+              <div class="d-flex align-items-center flex-grow-1">
+                <img
+                  :src="chat.avatar"
+                  class="rounded-circle me-2 avatar-border"
+                  width="40"
+                  height="40"
+                />
+                <div class="flex-grow-1">
+                  <div class="fw-semibold">
+                    {{ chat.name }}
+                    <span v-if="chat.pinned" class="pinned-icon">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        fill="currentColor"
+                        class="bi bi-pin"
+                        viewBox="0 0 16 16"
+                      >
+                        <path
+                          d="M4.146.146A.5.5 0 0 1 4.5 0h7a.5.5 0 0 1 .5.5c0 .68-.342 1.174-.646 1.479-.126.125-.25.224-.354.298v4.431l.078.048c.203.127.476.314.751.555C12.36 7.775 13 8.527 13 9.5a.5.5 0 0 1-.5.5h-4v4.5c0 .276-.224 1.5-.5 1.5s-.5-1.224-.5-1.5V10h-4a.5.5 0 0 1-.5-.5c0-.973.64-1.725 1.17-2.189A6 6 0 0 1 5 6.708V2.277a3 3 0 0 1-.354-.298C4.342 1.674 4 1.179 4 .5a.5.5 0 0 1 .146-.354m1.58 1.408-.002-.001zm-.002-.001.002.001A.5.5 0 0 1 6 2v5a.5.5 0 0 1-.276.447h-.002l-.012.007-.054.03a5 5 0 0 0-.827.58c-.318.278-.585.596-.725.936h7.792c-.14-.34-.407-.658-.725-.936a5 5 0 0 0-.881-.61l-.012-.006h-.002A.5.5 0 0 1 10 7V2a.5.5 0 0 1 .295-.458 1.8 1.8 0 0 0 .351-.271c.08-.08.155-.17.214-.271H5.14q.091.15.214.271a1.8 1.8 0 0 0 .37.282"
+                        />
+                      </svg>
+                    </span>
+                    <span v-if="chat.muted" class="pinned-icon">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        fill="currentColor"
+                        class="bi bi-bell-slash"
+                        viewBox="0 0 16 16"
+                      >
+                        <path
+                          d="M5.164 14H15c-.299-.199-.557-.553-.78-1-.9-1.8-1.22-5.12-1.22-6q0-.396-.06-.776l-.938.938c.02.708.157 2.154.457 3.58.161.767.377 1.566.663 2.258H6.164zm5.581-9.91a4 4 0 0 0-1.948-1.01L8 2.917l-.797.161A4 4 0 0 0 4 7c0 .628-.134 2.197-.459 3.742q-.075.358-.166.718l-1.653 1.653q.03-.055.059-.113C2.679 11.2 3 7.88 3 7c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0c.942.19 1.788.645 2.457 1.284zM10 15a2 2 0 1 1-4 0zm-9.375.625a.53.53 0 0 0 .75.75l14.75-14.75a.53.53 0 0 0-.75-.75z"
+                        />
+                      </svg>
+                    </span>
+                  </div>
+                  <small class="text-muted d-block text-truncate">
+                    {{ chat.lastMessage }}
+                  </small>
+                </div>
+              </div>
+              <button
+                class="contact-menu-btn"
+                @click.stop="openChatMenu($event, chat)"
+              >
+                ⋯
+              </button>
+            </div>
+          </template>
         </div>
       </div>
       <div class="chat-area d-flex flex-column">
@@ -170,13 +294,74 @@
               width="50"
               height="50"
             />
-            <div class="fw-bold fs-5 mb-1">{{ contactInfoData.name }}</div>
-            <div class="contact-meta fs-6 mb-1">
-              Last seen: {{ contactInfoData.lastSeen }}
+            <div class="fw-bold fs-5 mb-1 d-flex align-items-center gap-2">
+              <template v-if="editingChatName">
+                <input
+                  v-model="chatNameInput"
+                  class="chat-name-input"
+                  placeholder="New chat name..."
+                  @keydown.enter="saveChatName"
+                  @blur="saveChatName"
+                  ref="chatNameInput"
+                  autofocus
+                />
+              </template>
+              <template v-else>
+                {{ contactInfoData.name }}
+                <svg
+                  @click="startEditingChatName"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  class="bi bi-pencil-square chat-name-edit-icon"
+                  viewBox="0 0 16 16"
+                  style="cursor: pointer; flex-shrink: 0"
+                >
+                  <path
+                    d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"
+                  />
+                  <path
+                    fill-rule="evenodd"
+                    d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
+                  />
+                </svg>
+              </template>
             </div>
-            <div class="contact-meta fs-6 mb-1">
-              {{ contactInfoData.phone }}
-            </div>
+
+            <template v-if="contactInfoData.members?.length">
+              <div class="contact-meta fs-6 mb-2">
+                {{ contactInfoData.members.length }} Members
+              </div>
+              <div class="group-members-list w-100 mb-3">
+                <div
+                  v-for="(member, i) in contactInfoData.members"
+                  :key="i"
+                  class="group-member-item"
+                >
+                  <img
+                    :src="member.avatar"
+                    class="rounded-circle avatar-border"
+                    width="36"
+                    height="36"
+                  />
+                  <div class="group-member-info">
+                    <div class="fw-semibold">{{ member.name }}</div>
+                    <small class="contact-meta"
+                      >Last seen: {{ member.lastSeen }}</small
+                    >
+                  </div>
+                </div>
+              </div>
+            </template>
+            <template v-else>
+              <div class="contact-meta fs-6 mb-1">
+                Last seen: {{ contactInfoData.lastSeen }}
+              </div>
+              <div class="contact-meta fs-6 mb-1">
+                {{ contactInfoData.phone }}
+              </div>
+            </template>
 
             <div class="shared-media w-100">
               <div class="fw-bold fs-5 mb-3">Shared Media</div>
@@ -207,15 +392,58 @@
           <div
             class="chat-header border-bottom p-3 d-flex align-items-center justify-content-between"
           >
-            <div v-if="selectedChat" class="d-flex align-items-center">
+            <div
+              v-if="selectedChat"
+              class="d-flex align-items-center"
+              @mouseenter="hoveredChatName = true"
+              @mouseleave="hoveredChatName = false"
+            >
               <img
                 :src="selectedChat.avatar"
                 class="rounded-circle me-2 avatar-border"
                 width="40"
                 height="40"
               />
-              <div class="fw-bold">
-                {{ selectedChat.name }}
+              <div
+                class="fw-bold d-flex align-items-center gap-2 chat-name-wrapper"
+              >
+                <template v-if="editingChatName">
+                  <input
+                    v-model="chatNameInput"
+                    class="chat-name-input"
+                    placeholder="New chat name..."
+                    @keydown.enter="saveChatName"
+                    @blur="saveChatName"
+                    ref="chatNameInput"
+                    autofocus
+                  />
+                </template>
+                <template v-else>
+                  {{ selectedChat.name }}
+                  <span
+                    class="chat-name-icon-slot"
+                    @click="startEditingChatName"
+                  >
+                    <svg
+                      v-show="hoveredChatName"
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      fill="currentColor"
+                      class="bi bi-pencil-square chat-name-edit-icon"
+                      viewBox="0 0 16 16"
+                      style="cursor: pointer"
+                    >
+                      <path
+                        d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"
+                      />
+                      <path
+                        fill-rule="evenodd"
+                        d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"
+                      />
+                    </svg>
+                  </span>
+                </template>
               </div>
             </div>
 
@@ -624,6 +852,7 @@
     </div>
     <HeaderMenu
       :visible="headerMenu.visible"
+      :class="{ measuring: headerMenu.measuring }"
       :x="headerMenu.x"
       :y="headerMenu.y"
       :items="headerMenuItems"
@@ -678,6 +907,8 @@ export default {
   },
   data() {
     return {
+      showNewContactView: false,
+      newContactSearch: "",
       viewingContactInfo: false,
       contactInfoData: null,
       showLogoutMessage: false,
@@ -692,6 +923,10 @@ export default {
       pendingReactMessage: null,
       replyingTo: null,
       showMediaLimitToast: false,
+      showNewChatMenu: false,
+      editingChatName: false,
+      hoveredChatName: false,
+      chatNameInput: "",
       pendingMedia: [],
       lightbox: {
         visible: false,
@@ -701,6 +936,9 @@ export default {
       chatSearchQuery: "",
       searchResults: [],
       currentSearchIndex: 0,
+      showNewGroupView: false,
+      groupSearch: "",
+      selectedGroupMembers: [],
       user: {
         name: "Your Name",
         avatar:
@@ -714,6 +952,7 @@ export default {
       },
       headerMenu: {
         visible: false,
+        measuring: false,
         x: 0,
         y: 0,
       },
@@ -854,7 +1093,12 @@ export default {
         return !chat.hidden;
       });
     },
-
+    filteredGroupChats() {
+      const q = this.groupSearch.toLowerCase();
+      return this.chats.filter(
+        (c) => !c.hidden && c.name.toLowerCase().includes(q),
+      );
+    },
     sortedChats() {
       return [...this.chats].sort((a, b) => {
         if (a.pinned && b.pinned) {
@@ -868,6 +1112,65 @@ export default {
     },
   },
   methods: {
+    clampMenuPosition(x, y) {
+      const menuWidth = 220;
+      const menuHeight = 400;
+      const padding = 8;
+      const clampedX = Math.min(x, window.innerWidth - menuWidth - padding);
+      const clampedY = Math.min(y, window.innerHeight - menuHeight - padding);
+      return {
+        x: Math.max(padding, clampedX),
+        y: Math.max(padding, clampedY),
+      };
+    },
+    startEditingChatName() {
+      const chat = this.selectedChat || this.contactInfoData;
+      if (!chat) return;
+      this.chatNameInput = chat.name;
+      this.editingChatName = true;
+      this.$nextTick(() => this.$refs.chatNameInput?.focus());
+    },
+    saveChatName() {
+      const chat = this.selectedChat || this.contactInfoData;
+      if (!chat) return;
+      const trimmed = this.chatNameInput.trim();
+      if (trimmed) chat.name = trimmed;
+      this.editingChatName = false;
+      this.chatNameInput = "";
+    },
+    toggleGroupMember(chat) {
+      const i = this.selectedGroupMembers.indexOf(chat);
+      if (i === -1) this.selectedGroupMembers.push(chat);
+      else this.selectedGroupMembers.splice(i, 1);
+    },
+    createGroup() {
+      if (this.selectedGroupMembers.length < 2) return;
+      const name = this.selectedGroupMembers.map((c) => c.name).join(", ");
+      const newGroup = {
+        id: Date.now(),
+        name,
+        avatar: this.selectedGroupMembers[0].avatar,
+        lastMessage: "",
+        phone: "",
+        pinned: false,
+        pinnedAt: null,
+        muted: false,
+        hidden: false,
+        blocked: false,
+        messages: [],
+        members: this.selectedGroupMembers.map((c) => ({
+          name: c.name,
+          avatar: c.avatar,
+          lastSeen: "Recently",
+        })),
+      };
+      this.chats.push(newGroup);
+      this.showNewChatMenu = false;
+      this.showNewGroupView = false;
+      this.groupSearch = "";
+      this.selectedGroupMembers = [];
+      this.selectedChat = newGroup;
+    },
     triggerFileUpload() {
       this.$refs.fileInput.click();
     },
@@ -1004,7 +1307,14 @@ export default {
     },
     openChatMenu(event, chat) {
       event.stopPropagation();
-
+      const contactInfoItem = this.headerMenuItems.find((i) =>
+        i.action.toString().includes("contactInfo"),
+      );
+      if (contactInfoItem) {
+        contactInfoItem.label = chat.members?.length
+          ? "👥 Group info"
+          : "👤 Contact Info";
+      }
       const rect = event.currentTarget.getBoundingClientRect();
       this.selectedChatForMenu = chat;
 
@@ -1035,21 +1345,33 @@ export default {
           ? "📍 Unpin Conversation"
           : "📌 Pin Conversation";
       }
-
       this.headerMenu.visible = true;
-      this.headerMenu.x = rect.right - 5;
-      this.headerMenu.y = rect.bottom + 20;
+      this.headerMenu.x = 0;
+      this.headerMenu.y = 0;
+      this.$nextTick(() => {
+        const menuEl = this.$el.querySelector(".header-menu");
+        const pos = this.clampMenuPosition(rect.right + 10, rect.bottom - 10);
+        this.headerMenu.x = pos.x;
+        this.headerMenu.y = pos.y;
+        this.headerMenu.visible = true;
+      });
     },
 
     toggleHeaderMenu(event) {
       this.selectedChatForMenu = this.selectedChat;
       event.stopPropagation();
-
+      const contactInfoItem = this.headerMenuItems.find((i) =>
+        i.action.toString().includes("contactInfo"),
+      );
+      if (contactInfoItem) {
+        contactInfoItem.label = this.selectedChatForMenu?.members?.length
+          ? "👥 Group info"
+          : "👤 Contact Info";
+      }
       if (this.headerMenu.visible) {
         this.closeHeaderMenu();
         return;
       }
-
       const rect = event.currentTarget.getBoundingClientRect();
 
       const pinItem = this.headerMenuItems.find((i) =>
@@ -1083,10 +1405,16 @@ export default {
             : "🔕 Mute Notifications";
         }
       }
-
       this.headerMenu.visible = true;
-      this.headerMenu.x = rect.right - 180;
-      this.headerMenu.y = rect.bottom + 5;
+      this.headerMenu.x = 0;
+      this.headerMenu.y = 0;
+      this.$nextTick(() => {
+        const menuEl = this.$el.querySelector(".header-menu");
+        const pos = this.clampMenuPosition(rect.right - 220, rect.bottom + 5);
+        this.headerMenu.x = pos.x;
+        this.headerMenu.y = pos.y;
+        this.headerMenu.visible = true;
+      });
     },
 
     closeHeaderMenu() {
@@ -1243,7 +1571,13 @@ export default {
       if (box) box.scrollTop = box.scrollHeight;
     },
     createConversation() {
-      alert("Hello");
+      this.showNewChatMenu = !this.showNewChatMenu;
+      this.showNewContactView = false;
+      this.showNewGroupView = false;
+      this.newContactSearch = "";
+      this.groupSearch = "";
+      this.selectedGroupMembers = [];
+      this.selectedChat = null;
     },
     openMessageMenu(event, msg) {
       event.stopPropagation();
@@ -1364,8 +1698,8 @@ export default {
 .contact-item,
 .message,
 .theme-action-btn {
-  transition: background-color 1.3s ease, color 1.3s ease,
-    border-color 1.3s ease;
+  transition: background-color 0.7s ease, color 0.7s ease,
+    border-color 0.7s ease;
 }
 
 .app-body {
@@ -2812,5 +3146,199 @@ export default {
 
 .media-clear-btn:hover::after {
   opacity: 1;
+}
+.new-chat-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 0, 0, 0.2);
+}
+
+.new-chat-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: left;
+  width: 100%;
+  transition: background 0.2s ease;
+}
+
+.light .new-chat-option {
+  color: black;
+}
+
+.dark .new-chat-option {
+  color: white;
+}
+
+.light .new-chat-option:hover {
+  background: rgba(255, 0, 0, 0.08);
+}
+
+.dark .new-chat-option:hover {
+  background: rgba(255, 0, 0, 0.15);
+}
+
+.icon-white {
+  color: white;
+  font-size: 18px;
+}
+
+.icon-black {
+  color: black;
+  font-size: 18px;
+}
+.new-chat-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid #ff0000;
+  box-shadow: 0 0 6px rgba(255, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.light .new-chat-icon-wrap {
+  background: rgba(255, 0, 0, 0.08);
+  color: black;
+}
+
+.dark .new-chat-icon-wrap {
+  background: rgba(255, 0, 0, 0.15);
+  color: white;
+}
+.new-contact-view {
+  display: flex;
+  flex-direction: column;
+}
+
+.send-invite-btn {
+  width: 40%;
+  align-self: center;
+  padding: 5px 16px;
+  font-size: 14px;
+  font-weight: bold;
+  margin-top: -7px;
+}
+.light .theme-action-btn:hover {
+  background-color: #8d0000;
+  color: white;
+}
+
+.dark .theme-action-btn:hover {
+  background-color: #ff0000;
+  color: white;
+}
+.action-btn-hover {
+  transition: background-color 0.2s ease !important;
+}
+.group-select-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #ff0000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+}
+
+.group-select-circle.selected {
+  background: #ff0000;
+  color: white;
+}
+
+.group-member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  max-height: 300px;
+}
+
+.send-invite-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.chat-name-wrapper {
+  cursor: default;
+}
+
+.chat-name-edit-icon {
+  opacity: 0.7;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.chat-name-edit-icon:hover {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+.chat-name-input {
+  border: none;
+  border-bottom: 2px solid #ff0000;
+  outline: none;
+  background: transparent;
+  font-size: inherit;
+  font-weight: bold;
+  color: inherit;
+  width: 180px;
+  padding: 0 2px;
+}
+.chat-name-icon-slot {
+  display: inline-flex;
+  align-items: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.group-members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 0, 0, 0.2);
+  border-radius: 10px;
+  padding: 8px;
+}
+
+.group-member-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.light .group-member-item:hover {
+  background: rgba(255, 0, 0, 0.06);
+}
+
+.dark .group-member-item:hover {
+  background: rgba(255, 0, 0, 0.12);
+}
+
+.group-member-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.header-menu.measuring {
+  opacity: 0;
+  pointer-events: none;
 }
 </style>
