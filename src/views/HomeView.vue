@@ -7,81 +7,151 @@
       <h5 class="mb-0 me-2">Brzojav</h5>
       <div class="flex-spacer"></div>
       <div class="d-flex align-items-center gap-1">
-        <button class="theme-btn" @click="toggleTheme" data-tooltip="Change Theme">
+        <button
+          class="theme-btn"
+          @click="toggleTheme"
+          data-tooltip="Change Theme"
+        >
           <span v-if="theme === 'light'">⏾</span>
           <span v-else class="sun">☀︎</span>
         </button>
 
-        <button class="theme-btn" @click="handleSpecialAction" data-tooltip="Settings">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-gear-fill"
-            viewBox="0 0 16 16">
+        <button
+          class="theme-btn"
+          @click="handleSpecialAction"
+          data-tooltip="Settings"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            fill="currentColor"
+            class="bi bi-gear-fill"
+            viewBox="0 0 16 16"
+          >
             <path
-              d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.340a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z" />
+              d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.340a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"
+            />
           </svg>
         </button>
       </div>
 
-      <input v-model="globalSearch" type="text" class="form-control search-input"
-        placeholder="Search conversations..." />
+      <input
+        v-model="globalSearch"
+        type="text"
+        class="form-control search-input"
+        placeholder="Search conversations..."
+      />
     </div>
     <div class="app-body">
       <div class="sidebar border-end">
         <div class="profile-section border-bottom mb-2">
           <div class="d-flex align-items-center justify-content-between w-100">
-            <div class="d-flex align-items-center flex-grow-1" @click="goToProfile">
-              <img :src="user.avatar" class="rounded-circle me-3 avatar-border" width="40" height="40" />
+            <div
+              class="d-flex align-items-center flex-grow-1"
+              @click="goToProfile"
+            >
+              <img
+                :src="user.avatar"
+                class="rounded-circle me-3 avatar-border"
+                width="40"
+                height="40"
+              />
               <div>
                 <div class="fw-bold">{{ user.name }}</div>
                 <small class="text-muted">View Profile</small>
               </div>
             </div>
 
-            <button class="theme-btn logout-btn" @click="logout" data-tooltip="Log out">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
-                class="bi bi-box-arrow-left" viewBox="0 0 16 16">
-                <path fill-rule="evenodd"
-                  d="M6 12.5a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-8a.5.5 0 0 0-.5.5v2a.5.5 0 0 1-1 0v-2A1.5 1.5 0 0 1 6.5 2h8A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 5 12.5v-2a.5.5 0 0 1 1 0z" />
-                <path fill-rule="evenodd"
-                  d="M.146 8.354a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L1.707 7.5H10.5a.5.5 0 0 1 0 1H1.707l2.147 2.146a.5.5 0 0 1-.708.708z" />
+            <button
+              class="theme-btn logout-btn"
+              @click="logout"
+              data-tooltip="Log out"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                fill="currentColor"
+                class="bi bi-box-arrow-left"
+                viewBox="0 0 16 16"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M6 12.5a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-8a.5.5 0 0 0-.5.5v2a.5.5 0 0 1-1 0v-2A1.5 1.5 0 0 1 6.5 2h8A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 5 12.5v-2a.5.5 0 0 1 1 0z"
+                />
+                <path
+                  fill-rule="evenodd"
+                  d="M.146 8.354a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L1.707 7.5H10.5a.5.5 0 0 1 0 1H1.707l2.147 2.146a.5.5 0 0 1-.708.708z"
+                />
               </svg>
             </button>
           </div>
         </div>
         <div class="px-2 py-1">
-          <button class="btn w-100 theme-action-btn" @click="createConversation">
+          <button
+            class="btn w-100 theme-action-btn"
+            @click="createConversation"
+          >
             + New Chat / Group
           </button>
         </div>
         <div class="contacts">
-          <div v-for="chat in filteredChats" :key="chat.id"
+          <div
+            v-for="chat in filteredChats"
+            :key="chat.id"
             class="contact-item d-flex justify-content-between align-items-center"
-            :class="{ active: selectedChat?.id === chat.id }" @click="selectChat(chat)">
+            :class="{ active: selectedChat?.id === chat.id }"
+            @click="selectChat(chat)"
+          >
             <div class="d-flex align-items-center flex-grow-1">
-              <img :src="chat.avatar" class="rounded-circle me-2 avatar-border" width="40" height="40" />
+              <img
+                :src="chat.avatar"
+                class="rounded-circle me-2 avatar-border"
+                width="40"
+                height="40"
+              />
               <div class="flex-grow-1">
                 <div class="fw-semibold">
                   {{ chat.name }}
                   <span v-if="chat.pinned" class="pinned-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pin"
-                      viewBox="0 0 16 16">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      fill="currentColor"
+                      class="bi bi-pin"
+                      viewBox="0 0 16 16"
+                    >
                       <path
-                        d="M4.146.146A.5.5 0 0 1 4.5 0h7a.5.5 0 0 1 .5.5c0 .68-.342 1.174-.646 1.479-.126.125-.25.224-.354.298v4.431l.078.048c.203.127.476.314.751.555C12.36 7.775 13 8.527 13 9.5a.5.5 0 0 1-.5.5h-4v4.5c0 .276-.224 1.5-.5 1.5s-.5-1.224-.5-1.5V10h-4a.5.5 0 0 1-.5-.5c0-.973.64-1.725 1.17-2.189A6 6 0 0 1 5 6.708V2.277a3 3 0 0 1-.354-.298C4.342 1.674 4 1.179 4 .5a.5.5 0 0 1 .146-.354m1.58 1.408-.002-.001zm-.002-.001.002.001A.5.5 0 0 1 6 2v5a.5.5 0 0 1-.276.447h-.002l-.012.007-.054.03a5 5 0 0 0-.827.58c-.318.278-.585.596-.725.936h7.792c-.14-.34-.407-.658-.725-.936a5 5 0 0 0-.881-.61l-.012-.006h-.002A.5.5 0 0 1 10 7V2a.5.5 0 0 1 .295-.458 1.8 1.8 0 0 0 .351-.271c.08-.08.155-.17.214-.271H5.14q.091.15.214.271a1.8 1.8 0 0 0 .37.282" />
+                        d="M4.146.146A.5.5 0 0 1 4.5 0h7a.5.5 0 0 1 .5.5c0 .68-.342 1.174-.646 1.479-.126.125-.25.224-.354.298v4.431l.078.048c.203.127.476.314.751.555C12.36 7.775 13 8.527 13 9.5a.5.5 0 0 1-.5.5h-4v4.5c0 .276-.224 1.5-.5 1.5s-.5-1.224-.5-1.5V10h-4a.5.5 0 0 1-.5-.5c0-.973.64-1.725 1.17-2.189A6 6 0 0 1 5 6.708V2.277a3 3 0 0 1-.354-.298C4.342 1.674 4 1.179 4 .5a.5.5 0 0 1 .146-.354m1.58 1.408-.002-.001zm-.002-.001.002.001A.5.5 0 0 1 6 2v5a.5.5 0 0 1-.276.447h-.002l-.012.007-.054.03a5 5 0 0 0-.827.58c-.318.278-.585.596-.725.936h7.792c-.14-.34-.407-.658-.725-.936a5 5 0 0 0-.881-.61l-.012-.006h-.002A.5.5 0 0 1 10 7V2a.5.5 0 0 1 .295-.458 1.8 1.8 0 0 0 .351-.271c.08-.08.155-.17.214-.271H5.14q.091.15.214.271a1.8 1.8 0 0 0 .37.282"
+                      />
                     </svg>
                   </span>
                   <span v-if="chat.muted" class="pinned-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                      class="bi bi-bell-slash" viewBox="0 0 16 16">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      fill="currentColor"
+                      class="bi bi-bell-slash"
+                      viewBox="0 0 16 16"
+                    >
                       <path
-                        d="M5.164 14H15c-.299-.199-.557-.553-.78-1-.9-1.8-1.22-5.12-1.22-6q0-.396-.06-.776l-.938.938c.02.708.157 2.154.457 3.58.161.767.377 1.566.663 2.258H6.164zm5.581-9.91a4 4 0 0 0-1.948-1.01L8 2.917l-.797.161A4 4 0 0 0 4 7c0 .628-.134 2.197-.459 3.742q-.075.358-.166.718l-1.653 1.653q.03-.055.059-.113C2.679 11.2 3 7.88 3 7c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0c.942.19 1.788.645 2.457 1.284zM10 15a2 2 0 1 1-4 0zm-9.375.625a.53.53 0 0 0 .75.75l14.75-14.75a.53.53 0 0 0-.75-.75z" />
+                        d="M5.164 14H15c-.299-.199-.557-.553-.78-1-.9-1.8-1.22-5.12-1.22-6q0-.396-.06-.776l-.938.938c.02.708.157 2.154.457 3.58.161.767.377 1.566.663 2.258H6.164zm5.581-9.91a4 4 0 0 0-1.948-1.01L8 2.917l-.797.161A4 4 0 0 0 4 7c0 .628-.134 2.197-.459 3.742q-.075.358-.166.718l-1.653 1.653q.03-.055.059-.113C2.679 11.2 3 7.88 3 7c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0c.942.19 1.788.645 2.457 1.284zM10 15a2 2 0 1 1-4 0zm-9.375.625a.53.53 0 0 0 .75.75l14.75-14.75a.53.53 0 0 0-.75-.75z"
+                      />
                     </svg>
                   </span>
                 </div>
-                <small class="text-muted text-truncate">
+                <small class="text-muted d-block text-truncate">
                   {{ chat.lastMessage }}
                 </small>
               </div>
             </div>
-            <button class="contact-menu-btn" @click.stop="openChatMenu($event, chat)">
+            <button
+              class="contact-menu-btn"
+              @click.stop="openChatMenu($event, chat)"
+            >
               ⋯
             </button>
           </div>
@@ -89,44 +159,61 @@
       </div>
       <div class="chat-area d-flex flex-column">
         <div v-if="viewingContactInfo" class="contact-info-wrapper">
+          <button class="back-btn" @click="closeContactInfo">← Back</button>
 
-          <button class="back-btn" @click="closeContactInfo">
-            ← Back
-          </button>
-
-          <div class="contact-info-view d-flex flex-column align-items-center justify-content-center p-5">
-
-            <img :src="contactInfoData.avatar" class="rounded-circle mb-3" width="50" height="50" />
+          <div
+            class="contact-info-view d-flex flex-column align-items-center justify-content-center p-5"
+          >
+            <img
+              :src="contactInfoData.avatar"
+              class="rounded-circle mb-3"
+              width="50"
+              height="50"
+            />
             <div class="fw-bold fs-5 mb-1">{{ contactInfoData.name }}</div>
             <div class="contact-meta fs-6 mb-1">
               Last seen: {{ contactInfoData.lastSeen }}
             </div>
-            <div class="contact-meta fs-6 mb-1">{{ contactInfoData.phone }}</div>
+            <div class="contact-meta fs-6 mb-1">
+              {{ contactInfoData.phone }}
+            </div>
 
             <div class="shared-media w-100">
               <div class="fw-bold fs-5 mb-3">Shared Media</div>
 
               <div class="media-grid">
                 <div v-for="media in sharedMedia" :key="media.id">
+                  <img
+                    v-if="media.type === 'image' || media.type === 'gif'"
+                    :src="media.url"
+                    class="media-item"
+                    @click="openLightbox(media)"
+                  />
 
-                  <img v-if="media.type === 'image' || media.type === 'gif'" :src="media.url" class="media-item"
-                    @click="openLightbox(media)" />
-
-                  <video v-else-if="media.type === 'video'" class="media-item" @click="openLightbox(media)">
+                  <video
+                    v-else-if="media.type === 'video'"
+                    class="media-item"
+                    @click="openLightbox(media)"
+                  >
                     <source :src="media.url" type="video/mp4" />
                   </video>
-
                 </div>
               </div>
             </div>
-
           </div>
         </div>
 
         <template v-else>
-          <div class="chat-header border-bottom p-3 d-flex align-items-center justify-content-between">
+          <div
+            class="chat-header border-bottom p-3 d-flex align-items-center justify-content-between"
+          >
             <div v-if="selectedChat" class="d-flex align-items-center">
-              <img :src="selectedChat.avatar" class="rounded-circle me-2 avatar-border" width="40" height="40" />
+              <img
+                :src="selectedChat.avatar"
+                class="rounded-circle me-2 avatar-border"
+                width="40"
+                height="40"
+              />
               <div class="fw-bold">
                 {{ selectedChat.name }}
               </div>
@@ -140,112 +227,282 @@
                     {{ searchResults.length }} results
                   </span>
 
-                  <button @click="prevResult" data-tooltip="Previous" class="icon-btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                      viewBox="0 0 16 16">
-                      <path fill-rule="evenodd"
-                        d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8" />
-                    </svg>
-                  </button>
-
-                  <button @click="nextResult" data-tooltip="Next" class="icon-btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                      viewBox="0 0 16 16">
-                      <path fill-rule="evenodd"
-                        d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8" />
-                    </svg>
-                  </button>
-
-                  <button @click="closeSearch" data-tooltip="Clear search" class="icon-btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                      class="bi bi-x-lg" viewBox="0 0 16 16">
+                  <button
+                    @click="prevResult"
+                    data-tooltip="Previous"
+                    class="icon-btn"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      fill="currentColor"
+                      viewBox="0 0 16 16"
+                    >
                       <path
-                        d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z" />
+                        fill-rule="evenodd"
+                        d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8"
+                      />
+                    </svg>
+                  </button>
+
+                  <button
+                    @click="nextResult"
+                    data-tooltip="Next"
+                    class="icon-btn"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      fill="currentColor"
+                      viewBox="0 0 16 16"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8"
+                      />
+                    </svg>
+                  </button>
+
+                  <button
+                    @click="closeSearch"
+                    data-tooltip="Clear search"
+                    class="icon-btn"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      fill="currentColor"
+                      class="bi bi-x-lg"
+                      viewBox="0 0 16 16"
+                    >
+                      <path
+                        d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"
+                      />
                     </svg>
                   </button>
                 </div>
 
-                <input v-model="chatSearchQuery" @input="searchMessages" type="text" placeholder="Search messages..."
-                  class="form-control search-input-inner" />
+                <input
+                  v-model="chatSearchQuery"
+                  @input="searchMessages"
+                  type="text"
+                  placeholder="Search messages..."
+                  class="form-control search-input-inner"
+                />
               </div>
-              <button class="header-icon" @click="toggleChatSearch" data-tooltip="Search in chat">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-search"
-                  viewBox="0 0 16 16">
+              <button
+                class="header-icon"
+                @click="toggleChatSearch"
+                data-tooltip="Search in chat"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  fill="currentColor"
+                  class="bi bi-search"
+                  viewBox="0 0 16 16"
+                >
                   <path
-                    d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
+                    d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"
+                  />
                 </svg>
               </button>
 
-              <button class="header-icon" data-tooltip="More" @click.stop="toggleHeaderMenu($event)">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
-                  class="bi bi-three-dots-vertical" viewBox="0 0 16 16">
+              <button
+                class="header-icon"
+                data-tooltip="More"
+                @click.stop="toggleHeaderMenu($event)"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  fill="currentColor"
+                  class="bi bi-three-dots-vertical"
+                  viewBox="0 0 16 16"
+                >
                   <path
-                    d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0" />
+                    d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"
+                  />
                 </svg>
               </button>
             </div>
           </div>
           <div v-if="pinnedMessage" class="pinned-bar" @click="scrollToPinned">
             📌 <span class="pinned-text">{{ pinnedMessage.text }}</span>
-            <button class="unpin-btn" @click.stop="pinnedMessage = null">✕</button>
+            <button class="unpin-btn" @click.stop="pinnedMessage = null">
+              ✕
+            </button>
           </div>
           <div ref="messagesBox" class="messages flex-grow-1 p-3">
-            <div v-for="(msg, index) in selectedChat?.messages || []" :key="index" class="mb-2"
-              :class="msg.sender === 'me' ? 'text-end' : 'text-start'">
-              <div class="message-wrapper w-100 d-flex" :class="msg.sender === 'me'
-                ? 'justify-content-end'
-                : 'justify-content-start'
-                " @mouseenter="hoveredMessage = index" @mouseleave="hoveredMessage = null">
-                <div v-if="hoveredMessage === index && msg.sender === 'me'" class="message-actions">
-                  <button class="action-btn" @click.stop="openMessageMenu($event, msg)" data-tooltip="More">
+            <div
+              v-for="(msg, index) in selectedChat?.messages || []"
+              :key="index"
+              class="mb-2"
+              :class="msg.sender === 'me' ? 'text-end' : 'text-start'"
+            >
+              <div
+                class="message-wrapper w-100 d-flex"
+                :class="
+                  msg.sender === 'me'
+                    ? 'justify-content-end'
+                    : 'justify-content-start'
+                "
+                @mouseenter="hoveredMessage = index"
+                @mouseleave="hoveredMessage = null"
+              >
+                <div
+                  v-if="hoveredMessage === index && msg.sender === 'me'"
+                  class="message-actions"
+                >
+                  <button
+                    class="action-btn"
+                    @click.stop="openMessageMenu($event, msg)"
+                    data-tooltip="More"
+                  >
                     ⋮
                   </button>
-                  <button class="action-btn" @click.stop="replyMessage" data-tooltip="Reply">
+                  <button
+                    class="action-btn"
+                    @click.stop="replyMessage"
+                    data-tooltip="Reply"
+                  >
                     ⤶
                   </button>
-                  <button class="action-btn" @click.stop="reactMessage($event, msg)" data-tooltip="React">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                      class="bi bi-emoji-grin" viewBox="0 0 16 16">
+                  <button
+                    class="action-btn"
+                    @click.stop="reactMessage($event, msg)"
+                    data-tooltip="React"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      fill="currentColor"
+                      class="bi bi-emoji-grin"
+                      viewBox="0 0 16 16"
+                    >
                       <path
-                        d="M12.946 11.398A6.002 6.002 0 0 1 2.108 9.14c-.114-.595.426-1.068 1.028-.997C4.405 8.289 6.48 8.5 8 8.5s3.595-.21 4.864-.358c.602-.07 1.142.402 1.028.998a5.95 5.95 0 0 1-.946 2.258m-.078-2.25C11.588 9.295 9.539 9.5 8 9.5s-3.589-.205-4.868-.352c.11.468.286.91.517 1.317A37 37 0 0 0 8 10.75a37 37 0 0 0 4.351-.285c.231-.407.407-.85.517-1.317m-1.36 2.416c-1.02.1-2.255.186-3.508.186s-2.488-.086-3.507-.186A5 5 0 0 0 8 13a5 5 0 0 0 3.507-1.436ZM6.488 7c.114-.294.179-.636.179-1 0-1.105-.597-2-1.334-2C4.597 4 4 4.895 4 6c0 .364.065.706.178 1 .23-.598.662-1 1.155-1 .494 0 .925.402 1.155 1M12 6c0 .364-.065.706-.178 1-.23-.598-.662-1-1.155-1-.494 0-.925.402-1.155 1a2.8 2.8 0 0 1-.179-1c0-1.105.597-2 1.334-2C11.403 4 12 4.895 12 6" />
-                      <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m0-1A7 7 0 1 1 8 1a7 7 0 0 1 0 14" />
+                        d="M12.946 11.398A6.002 6.002 0 0 1 2.108 9.14c-.114-.595.426-1.068 1.028-.997C4.405 8.289 6.48 8.5 8 8.5s3.595-.21 4.864-.358c.602-.07 1.142.402 1.028.998a5.95 5.95 0 0 1-.946 2.258m-.078-2.25C11.588 9.295 9.539 9.5 8 9.5s-3.589-.205-4.868-.352c.11.468.286.91.517 1.317A37 37 0 0 0 8 10.75a37 37 0 0 0 4.351-.285c.231-.407.407-.85.517-1.317m-1.36 2.416c-1.02.1-2.255.186-3.508.186s-2.488-.086-3.507-.186A5 5 0 0 0 8 13a5 5 0 0 0 3.507-1.436ZM6.488 7c.114-.294.179-.636.179-1 0-1.105-.597-2-1.334-2C4.597 4 4 4.895 4 6c0 .364.065.706.178 1 .23-.598.662-1 1.155-1 .494 0 .925.402 1.155 1M12 6c0 .364-.065.706-.178 1-.23-.598-.662-1-1.155-1-.494 0-.925.402-1.155 1a2.8 2.8 0 0 1-.179-1c0-1.105.597-2 1.334-2C11.403 4 12 4.895 12 6"
+                      />
+                      <path
+                        d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m0-1A7 7 0 1 1 8 1a7 7 0 0 1 0 14"
+                      />
                     </svg>
                   </button>
                 </div>
-                <div class="message-bubble-wrap" :class="[
-                  msg.sender === 'me' ? 'bubble-me' : 'bubble-other',
-                  msg.reactions && msg.reactions.length ? 'has-reaction' : ''
-                ]">
-                  <span class="d-inline-block p-2 rounded message" :class="[
-                    msg.sender === 'me' ? 'sent' : 'received',
-                    isMessageMatched(index) ? 'highlighted' : '',
-                    isCurrentMatch(index) ? 'active-highlight' : ''
-                  ]">
+                <div
+                  class="message-bubble-wrap"
+                  :class="[
+                    msg.sender === 'me' ? 'bubble-me' : 'bubble-other',
+                    msg.reactions && msg.reactions.length ? 'has-reaction' : '',
+                  ]"
+                >
+                  <div
+                    v-if="msg.replyTo"
+                    class="reply-quote"
+                    :class="
+                      msg.sender === 'me'
+                        ? 'reply-quote-me'
+                        : 'reply-quote-other'
+                    "
+                  >
+                    <div class="reply-quote-name">{{ msg.replyTo.sender }}</div>
+                    <div class="reply-quote-text">{{ msg.replyTo.text }}</div>
+                  </div>
+                  <div
+                    v-if="msg.media && msg.media.length"
+                    class="msg-media-wrap"
+                  >
+                    <div
+                      v-for="(m, i) in msg.media"
+                      :key="i"
+                      style="display: inline-block"
+                    >
+                      <img
+                        v-if="m.type === 'image'"
+                        :src="m.url"
+                        class="msg-media"
+                        @click="openLightbox(m)"
+                      />
+                      <video v-else :src="m.url" class="msg-media" controls />
+                    </div>
+                  </div>
+                  <span
+                    v-if="msg.text"
+                    class="d-inline-block p-2 rounded message"
+                    :class="[
+                      msg.sender === 'me' ? 'sent' : 'received',
+                      isMessageMatched(index) ? 'highlighted' : '',
+                      isCurrentMatch(index) ? 'active-highlight' : '',
+                    ]"
+                  >
                     {{ msg.text }}
                   </span>
-                  <div v-if="msg.reactions && msg.reactions.length" class="reaction-row"
-                    :class="msg.sender === 'me' ? 'reaction-row-me' : 'reaction-row-other'">
-                    <div v-for="(reaction, ri) in msg.reactions" :key="ri" class="reaction-chip"
-                      :class="{ 'reaction-chip-mine': reaction.sender === 'me' }"
-                      @click="removeReaction(msg, reaction)">
+                  <div
+                    v-if="msg.reactions && msg.reactions.length"
+                    class="reaction-row"
+                    :class="
+                      msg.sender === 'me'
+                        ? 'reaction-row-me'
+                        : 'reaction-row-other'
+                    "
+                  >
+                    <div
+                      v-for="(reaction, ri) in msg.reactions"
+                      :key="ri"
+                      class="reaction-chip"
+                      :class="{
+                        'reaction-chip-mine': reaction.sender === 'me',
+                      }"
+                      @click="removeReaction(msg, reaction)"
+                    >
                       <img :src="reaction.avatar" class="reaction-avatar" />
                       <span>{{ reaction.emoji }}</span>
                     </div>
                   </div>
                 </div>
-                <div v-if="hoveredMessage === index && msg.sender !== 'me'" class="message-actions">
-                  <button class="action-btn" @click.stop="reactMessage($event, msg)" data-tooltip="React">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
-                      class="bi bi-emoji-grin" viewBox="0 0 16 16">
+                <div
+                  v-if="hoveredMessage === index && msg.sender !== 'me'"
+                  class="message-actions"
+                >
+                  <button
+                    class="action-btn"
+                    @click.stop="reactMessage($event, msg)"
+                    data-tooltip="React"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      fill="currentColor"
+                      class="bi bi-emoji-grin"
+                      viewBox="0 0 16 16"
+                    >
                       <path
-                        d="M12.946 11.398A6.002 6.002 0 0 1 2.108 9.14c-.114-.595.426-1.068 1.028-.997C4.405 8.289 6.48 8.5 8 8.5s3.595-.21 4.864-.358c.602-.07 1.142.402 1.028.998a5.95 5.95 0 0 1-.946 2.258m-.078-2.25C11.588 9.295 9.539 9.5 8 9.5s-3.589-.205-4.868-.352c.11.468.286.91.517 1.317A37 37 0 0 0 8 10.75a37 37 0 0 0 4.351-.285c.231-.407.407-.85.517-1.317m-1.36 2.416c-1.02.1-2.255.186-3.508.186s-2.488-.086-3.507-.186A5 5 0 0 0 8 13a5 5 0 0 0 3.507-1.436ZM6.488 7c.114-.294.179-.636.179-1 0-1.105-.597-2-1.334-2C4.597 4 4 4.895 4 6c0 .364.065.706.178 1 .23-.598.662-1 1.155-1 .494 0 .925.402 1.155 1M12 6c0 .364-.065.706-.178 1-.23-.598-.662-1-1.155-1-.494 0-.925.402-1.155 1a2.8 2.8 0 0 1-.179-1c0-1.105.597-2 1.334-2C11.403 4 12 4.895 12 6" />
-                      <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m0-1A7 7 0 1 1 8 1a7 7 0 0 1 0 14" />
+                        d="M12.946 11.398A6.002 6.002 0 0 1 2.108 9.14c-.114-.595.426-1.068 1.028-.997C4.405 8.289 6.48 8.5 8 8.5s3.595-.21 4.864-.358c.602-.07 1.142.402 1.028.998a5.95 5.95 0 0 1-.946 2.258m-.078-2.25C11.588 9.295 9.539 9.5 8 9.5s-3.589-.205-4.868-.352c.11.468.286.91.517 1.317A37 37 0 0 0 8 10.75a37 37 0 0 0 4.351-.285c.231-.407.407-.85.517-1.317m-1.36 2.416c-1.02.1-2.255.186-3.508.186s-2.488-.086-3.507-.186A5 5 0 0 0 8 13a5 5 0 0 0 3.507-1.436ZM6.488 7c.114-.294.179-.636.179-1 0-1.105-.597-2-1.334-2C4.597 4 4 4.895 4 6c0 .364.065.706.178 1 .23-.598.662-1 1.155-1 .494 0 .925.402 1.155 1M12 6c0 .364-.065.706-.178 1-.23-.598-.662-1-1.155-1-.494 0-.925.402-1.155 1a2.8 2.8 0 0 1-.179-1c0-1.105.597-2 1.334-2C11.403 4 12 4.895 12 6"
+                      />
+                      <path
+                        d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m0-1A7 7 0 1 1 8 1a7 7 0 0 1 0 14"
+                      />
                     </svg>
                   </button>
-                  <button class="action-btn" @click.stop="replyMessage" data-tooltip="Reply">
+                  <button
+                    class="action-btn"
+                    @click.stop="replyMessage"
+                    data-tooltip="Reply"
+                  >
                     ⤶
                   </button>
-                  <button class="action-btn" @click.stop="openMessageMenu($event, msg)" data-tooltip="More">
+                  <button
+                    class="action-btn"
+                    @click.stop="openMessageMenu($event, msg)"
+                    data-tooltip="More"
+                  >
                     ⋮
                   </button>
                 </div>
@@ -253,55 +510,153 @@
             </div>
           </div>
         </template>
-        <div v-if="selectedChat && !viewingContactInfo" class="p-3 border-top d-flex">
-
-          <div v-if="selectedChat.blocked" class="blocked-text w-100 text-center">
+        <div
+          v-if="selectedChat && !viewingContactInfo"
+          class="input-area border-top"
+        >
+          <div
+            v-if="selectedChat.blocked"
+            class="blocked-text w-100 text-center p-3"
+          >
             User is blocked
           </div>
-
           <template v-else>
-            <textarea v-model="newMessage" @keydown="handleKeyPress" @input="autoGrow" ref="messageInput"
-              class="form-control me-2" placeholder="Type a message..." rows="1"></textarea>
-
-            <button class="btn send-btn" @click="sendMessage">Send</button>
+            <div v-if="replyingTo" class="reply-preview">
+              <div class="reply-preview-inner">
+                <div class="reply-preview-label">
+                  Replying to <strong>{{ replyingTo.sender }}</strong>
+                </div>
+                <div class="reply-preview-text">{{ replyingTo.text }}</div>
+              </div>
+              <button class="reply-cancel-btn" @click="replyingTo = null">
+                ✕
+              </button>
+            </div>
+            <div v-if="pendingMedia.length" class="media-preview-bar">
+              <div class="media-preview-inner">
+                <div
+                  v-for="(media, i) in pendingMedia"
+                  :key="i"
+                  class="media-preview-item"
+                >
+                  <img
+                    v-if="media.type === 'image'"
+                    :src="media.url"
+                    class="media-preview-thumb"
+                  />
+                  <video v-else :src="media.url" class="media-preview-thumb" />
+                  <button
+                    class="media-preview-remove"
+                    @click="pendingMedia.splice(i, 1)"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+              <button
+                class="media-clear-btn"
+                @click="pendingMedia = []"
+                data-tooltip="Clear"
+              >
+                ✕
+              </button>
+            </div>
+            <div class="input-row p-3">
+              <button
+                class="attach-btn"
+                @click="triggerFileUpload"
+                data-tooltip="Add media"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="28"
+                  height="28"
+                  fill="currentColor"
+                  viewBox="0 0 16 16"
+                >
+                  <path
+                    d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"
+                  />
+                </svg>
+              </button>
+              <input
+                type="file"
+                ref="fileInput"
+                accept="image/*,video/*"
+                multiple
+                style="display: none"
+                @change="handleFileUpload"
+              />
+              <textarea
+                v-model="newMessage"
+                @keydown="handleKeyPress"
+                ref="messageInput"
+                class="form-control me-2"
+                placeholder="Type a message..."
+                rows="1"
+              ></textarea>
+              <button class="btn send-btn" @click="sendMessage">Send</button>
+            </div>
           </template>
-
         </div>
       </div>
-      <div v-if="messageMenu.visible" class="message-menu"
-        :style="{ top: messageMenu.y + 'px', left: messageMenu.x + 'px' }">
+      <div
+        v-if="messageMenu.visible"
+        class="message-menu"
+        :style="{ top: messageMenu.y + 'px', left: messageMenu.x + 'px' }"
+      >
         <button @click="replyMessage">Reply</button>
         <button @click="copyMessage">Copy text</button>
         <button @click="reactMessage">React</button>
         <button @click="pinMessage">Pin message</button>
-        <button @click="deleteMessage" v-if="messageMenu.message?.sender === 'me'" style="color: red;">Delete
-          message</button>
+        <button
+          @click="deleteMessage"
+          v-if="messageMenu.message?.sender === 'me'"
+          style="color: red"
+        >
+          Delete message
+        </button>
       </div>
     </div>
-    <div v-if="showLogoutMessage" class="logout-toast">
-      Logging out...
+    <div v-if="showLogoutMessage" class="logout-toast">Logging out...</div>
+    <div v-if="showMediaLimitToast" class="media-limit-toast">
+      Cannot upload more than 10 media at once :(
     </div>
-    <HeaderMenu :visible="headerMenu.visible" :x="headerMenu.x" :y="headerMenu.y" :items="headerMenuItems"
-      @close="closeHeaderMenu" />
+    <HeaderMenu
+      :visible="headerMenu.visible"
+      :x="headerMenu.x"
+      :y="headerMenu.y"
+      :items="headerMenuItems"
+      @close="closeHeaderMenu"
+    />
     <div v-if="lightbox.visible" class="lightbox" @click="closeLightbox">
-
       <div class="lightbox-media-wrapper">
+        <div class="lightbox-close" @click.stop="closeLightbox">✕</div>
 
-        <div class="lightbox-close" @click.stop="closeLightbox">
-          ✕
-        </div>
-
-        <img v-if="lightbox.media?.type === 'image' || lightbox.media?.type === 'gif'" :src="lightbox.media?.url"
-          class="lightbox-content" />
+        <img
+          v-if="
+            lightbox.media?.type === 'image' || lightbox.media?.type === 'gif'
+          "
+          :src="lightbox.media?.url"
+          class="lightbox-content"
+        />
 
         <video v-else class="lightbox-content" controls autoplay>
           <source :src="lightbox.media?.url" type="video/mp4" />
         </video>
       </div>
     </div>
-    <EmojiPicker v-if="emojiPicker.visible" :theme="theme"
-      :style="{ top: emojiPicker.y + 'px', left: emojiPicker.x + 'px', position: 'fixed' }" @select="pickEmoji"
-      @close="emojiPicker.visible = false" />
+    <EmojiPicker
+      v-if="emojiPicker.visible"
+      :theme="theme"
+      :style="{
+        top: emojiPicker.y + 'px',
+        left: emojiPicker.x + 'px',
+        position: 'fixed',
+      }"
+      @select="pickEmoji"
+      @close="emojiPicker.visible = false"
+    />
   </div>
 </template>
 
@@ -310,7 +665,8 @@ import HeaderMenu from "../components/HeaderMenu.vue";
 import EmojiPicker from "../components/EmojiPicker.vue";
 export default {
   components: {
-    HeaderMenu, EmojiPicker
+    HeaderMenu,
+    EmojiPicker,
   },
   mounted() {
     document.addEventListener("click", this.handleClickOutside);
@@ -334,6 +690,9 @@ export default {
       hoveredMessage: null,
       pinnedMessage: null,
       pendingReactMessage: null,
+      replyingTo: null,
+      showMediaLimitToast: false,
+      pendingMedia: [],
       lightbox: {
         visible: false,
         media: null,
@@ -362,38 +721,38 @@ export default {
         {
           id: 1,
           type: "image",
-          url: "https://i.pinimg.com/736x/77/36/82/77368296b7a80054a2277233d7bfbe0b.jpg"
+          url: "https://i.pinimg.com/736x/77/36/82/77368296b7a80054a2277233d7bfbe0b.jpg",
         },
         {
           id: 2,
           type: "image",
-          url: "https://i.pinimg.com/736x/af/df/bc/afdfbcc120c6602097a0f9a7109214a5.jpg"
+          url: "https://i.pinimg.com/736x/af/df/bc/afdfbcc120c6602097a0f9a7109214a5.jpg",
         },
         {
           id: 3,
           type: "gif",
-          url: "https://i.pinimg.com/originals/32/c3/a7/32c3a75b9d47ea321c108dc076708640.gif"
+          url: "https://i.pinimg.com/originals/32/c3/a7/32c3a75b9d47ea321c108dc076708640.gif",
         },
         {
           id: 4,
           type: "image",
-          url: "https://i.pinimg.com/736x/4c/e0/0f/4ce00fd60c54afa644201398dc0533d4.jpg"
+          url: "https://i.pinimg.com/736x/4c/e0/0f/4ce00fd60c54afa644201398dc0533d4.jpg",
         },
         {
           id: 5,
           type: "image",
-          url: "https://i.pinimg.com/1200x/1a/1f/7a/1a1f7a9804716669cc2eb68bb80a1d24.jpg"
+          url: "https://i.pinimg.com/1200x/1a/1f/7a/1a1f7a9804716669cc2eb68bb80a1d24.jpg",
         },
         {
           id: 6,
           type: "image",
-          url: "https://i.pinimg.com/1200x/c6/01/e5/c601e591abec4594bb73db34b12eb812.jpg"
+          url: "https://i.pinimg.com/1200x/c6/01/e5/c601e591abec4594bb73db34b12eb812.jpg",
         },
         {
           id: 7,
           type: "video",
-          url: "https://cdn.discordapp.com/attachments/869655665575096410/1492082335359959040/PinLoad_ArpWire_TV_on_Instagram_24_Years_of_PlayStation_2_Today_marks_the_24th_annive_1775810540606.mp4?ex=69da0976&is=69d8b7f6&hm=89b3bce93e34b79d8a4c6cb45f35ac857a951ee8fe92188f905030fc770116f3&"
-        }
+          url: "https://cdn.discordapp.com/attachments/869655665575096410/1492082335359959040/PinLoad_ArpWire_TV_on_Instagram_24_Years_of_PlayStation_2_Today_marks_the_24th_annive_1775810540606.mp4?ex=69da0976&is=69d8b7f6&hm=89b3bce93e34b79d8a4c6cb45f35ac857a951ee8fe92188f905030fc770116f3&",
+        },
       ],
       headerMenuItems: [
         {
@@ -429,7 +788,8 @@ export default {
         {
           id: 1,
           name: "John Doe",
-          avatar: "https://i.pinimg.com/736x/10/ff/74/10ff74284ea2b3957b90b9556e05dce2.jpg",
+          avatar:
+            "https://i.pinimg.com/736x/10/ff/74/10ff74284ea2b3957b90b9556e05dce2.jpg",
           lastMessage: "Hey!",
           phone: "+1 555 123 4567",
           pinned: false,
@@ -442,6 +802,40 @@ export default {
             { sender: "me", text: "Hi there!" },
           ],
         },
+        {
+          id: 2,
+          name: "Alen Orban",
+          avatar:
+            "https://i.pinimg.com/originals/3e/60/44/3e6044ac70b25c8f767de5c253e521b9.gif",
+          lastMessage: "Bok!!!!",
+          phone: "+385 092 123 4567",
+          pinned: false,
+          pinnedAt: null,
+          muted: false,
+          hidden: false,
+          blocked: false,
+          messages: [
+            { sender: "other", text: "Ejla men!" },
+            { sender: "me", text: "Ojla" },
+          ],
+        },
+        {
+          id: 3,
+          name: "Chris Barnes",
+          avatar:
+            "https://i.pinimg.com/736x/7a/58/22/7a5822bbab7afda54f48cf7d2a64284d.jpg",
+          lastMessage: "Yooo!",
+          phone: "+1 555 123 4567",
+          pinned: false,
+          pinnedAt: null,
+          muted: false,
+          hidden: false,
+          blocked: false,
+          messages: [
+            { sender: "other", text: "Sup!" },
+            { sender: "me", text: "Hi there!" },
+          ],
+        },
       ],
       emojiPicker: { visible: false, x: 0, y: 0 },
     };
@@ -450,11 +844,10 @@ export default {
     filteredChats() {
       const search = this.globalSearch.toLowerCase();
 
-      return this.sortedChats.filter(chat => {
+      return this.sortedChats.filter((chat) => {
         const matchesSearch = chat.name.toLowerCase().includes(search);
 
         if (this.globalSearch) {
-
           return matchesSearch;
         }
 
@@ -475,20 +868,43 @@ export default {
     },
   },
   methods: {
+    triggerFileUpload() {
+      this.$refs.fileInput.click();
+    },
+    handleFileUpload(event) {
+      const files = Array.from(event.target.files);
+      if (!files.length || !this.selectedChat) return;
+
+      for (const file of files) {
+        if (this.pendingMedia.length >= 10) {
+          this.showMediaLimitToast = true;
+          setTimeout(() => {
+            this.showMediaLimitToast = false;
+          }, 3000);
+          break;
+        }
+        const url = URL.createObjectURL(file);
+        const type = file.type.startsWith("video") ? "video" : "image";
+        this.pendingMedia.push({ type, url });
+      }
+
+      event.target.value = "";
+      this.$nextTick(() => this.$refs.messageInput?.focus());
+    },
     scrollToPinned() {
       if (!this.pinnedMessage || !this.selectedChat) return;
       const index = this.selectedChat.messages.indexOf(this.pinnedMessage);
       if (index === -1) return;
       this.$nextTick(() => {
         const el = this.$refs.messagesBox?.children[index];
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
       });
     },
     isCurrentMatch(index) {
       return this.searchResults[this.currentSearchIndex]?.index === index;
     },
     isMessageMatched(index) {
-      return this.searchResults.some(r => r.index === index);
+      return this.searchResults.some((r) => r.index === index);
     },
     toggleChatSearch() {
       this.searchActive = !this.searchActive;
@@ -511,7 +927,7 @@ export default {
 
       this.searchResults = this.selectedChat.messages
         .map((msg, index) => ({ ...msg, index }))
-        .filter(msg => msg.text.toLowerCase().includes(query));
+        .filter((msg) => msg.text.toLowerCase().includes(query));
 
       this.currentSearchIndex = 0;
 
@@ -592,22 +1008,20 @@ export default {
       const rect = event.currentTarget.getBoundingClientRect();
       this.selectedChatForMenu = chat;
 
-      const pinItem = this.headerMenuItems.find(i =>
-        i.action.toString().includes("pinChat")
+      const pinItem = this.headerMenuItems.find((i) =>
+        i.action.toString().includes("pinChat"),
       );
 
-      const muteItem = this.headerMenuItems.find(i =>
-        i.action.toString().includes("muteChat")
+      const muteItem = this.headerMenuItems.find((i) =>
+        i.action.toString().includes("muteChat"),
       );
 
-      const blockItem = this.headerMenuItems.find(i =>
-        i.action.toString().includes("blockUser")
+      const blockItem = this.headerMenuItems.find((i) =>
+        i.action.toString().includes("blockUser"),
       );
 
       if (blockItem) {
-        blockItem.label = chat.blocked
-          ? "🔓 Unblock"
-          : "⛔ Block";
+        blockItem.label = chat.blocked ? "🔓 Unblock" : "⛔ Block";
       }
 
       if (muteItem) {
@@ -638,16 +1052,16 @@ export default {
 
       const rect = event.currentTarget.getBoundingClientRect();
 
-      const pinItem = this.headerMenuItems.find(i =>
-        i.action.toString().includes("pinChat")
+      const pinItem = this.headerMenuItems.find((i) =>
+        i.action.toString().includes("pinChat"),
       );
 
-      const blockItem = this.headerMenuItems.find(i =>
-        i.action.toString().includes("blockUser")
+      const blockItem = this.headerMenuItems.find((i) =>
+        i.action.toString().includes("blockUser"),
       );
 
-      const muteItem = this.headerMenuItems.find(i =>
-        i.action.toString().includes("muteChat")
+      const muteItem = this.headerMenuItems.find((i) =>
+        i.action.toString().includes("muteChat"),
       );
 
       if (this.selectedChatForMenu) {
@@ -803,18 +1217,25 @@ export default {
       this.theme = this.theme === "light" ? "dark" : "light";
     },
     sendMessage() {
-      if (!this.selectedChat) return;
-
-      if (this.selectedChat.blocked) return;
-
-      if (!this.newMessage.trim()) return;
+      if (!this.selectedChat || this.selectedChat.blocked) return;
+      if (!this.newMessage.trim() && !this.pendingMedia.length) return;
 
       this.selectedChat.messages.push({
         sender: "me",
         text: this.newMessage,
+        media: this.pendingMedia.length ? [...this.pendingMedia] : null,
+        replyTo: this.replyingTo || null,
       });
 
+      this.selectedChat.lastMessage = this.pendingMedia.length
+        ? this.pendingMedia.some((m) => m.type === "video")
+          ? "🎥 Video"
+          : "🖼️ Image"
+        : this.newMessage;
+
       this.newMessage = "";
+      this.replyingTo = null;
+      this.pendingMedia = [];
       this.$nextTick(this.scrollToBottom);
     },
     scrollToBottom() {
@@ -853,9 +1274,26 @@ export default {
     },
 
     replyMessage() {
-      if (!this.messageMenu.message) return;
-      this.newMessage = `> ${this.messageMenu.message.text}\n`;
+      const msg =
+        this.hoveredMessage !== null
+          ? this.selectedChat?.messages[this.hoveredMessage]
+          : this.messageMenu.message;
+      if (!msg) return;
+      const senderName =
+        msg.sender === "me" ? this.user.name : this.selectedChat?.name;
+
+      let previewText = msg.text;
+      if (!previewText && msg.media?.length) {
+        const hasVideo = msg.media.some((m) => m.type === "video");
+        const hasImage = msg.media.some((m) => m.type === "image");
+        if (hasVideo && hasImage) previewText = "🖼️ Image & 🎬 Video";
+        else if (hasVideo) previewText = "🎬 Video";
+        else previewText = "🖼️ Image";
+      }
+
+      this.replyingTo = { sender: senderName, text: previewText };
       this.closeMessageMenu();
+      this.$nextTick(() => this.$refs.messageInput?.focus());
     },
     reactMessage(event, msg) {
       const target = msg || this.messageMenu.message;
@@ -873,14 +1311,14 @@ export default {
     pickEmoji(emoji) {
       const msg = this.pendingReactMessage;
       if (!msg) return;
-      msg.reactions = (msg.reactions || []).filter(r => r.sender !== 'me');
-      msg.reactions.push({ emoji, sender: 'me', avatar: this.user.avatar });
+      msg.reactions = (msg.reactions || []).filter((r) => r.sender !== "me");
+      msg.reactions.push({ emoji, sender: "me", avatar: this.user.avatar });
       this.pendingReactMessage = null;
       this.emojiPicker.visible = false;
     },
     removeReaction(msg, reaction) {
-      if (reaction.sender !== 'me') return;
-      msg.reactions = msg.reactions.filter(r => r !== reaction);
+      if (reaction.sender !== "me") return;
+      msg.reactions = msg.reactions.filter((r) => r !== reaction);
     },
     pinMessage() {
       if (!this.messageMenu.message) return;
@@ -893,8 +1331,10 @@ export default {
     },
     deleteMessage() {
       if (!this.messageMenu.message || !this.selectedChat) return;
-      if (this.messageMenu.message.sender !== 'me') return;
-      const index = this.selectedChat.messages.indexOf(this.messageMenu.message);
+      if (this.messageMenu.message.sender !== "me") return;
+      const index = this.selectedChat.messages.indexOf(
+        this.messageMenu.message,
+      );
       if (index !== -1) {
         this.selectedChat.messages.splice(index, 1);
         // Update lastMessage preview in sidebar
@@ -1012,10 +1452,10 @@ export default {
 }
 
 .message {
+  display: block;
   word-break: break-word;
   overflow-wrap: break-word;
   white-space: pre-wrap;
-  max-width: 60ch;
 }
 
 .light .sent {
@@ -1973,10 +2413,11 @@ export default {
 }
 
 .message-bubble-wrap {
-  display: inline-flex;
-  flex-direction: column;
+  display: inline-block;
+  vertical-align: top;
   position: relative;
   max-width: 60ch;
+  min-width: 0;
 }
 
 .message-bubble-wrap.has-reaction .message {
@@ -2051,5 +2492,325 @@ export default {
 
 .reaction-chip-mine:hover {
   background: rgba(255, 0, 0, 0.25);
+}
+
+.input-area {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.input-row {
+  display: flex;
+  align-items: flex-end;
+}
+
+.reply-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 14px 6px;
+  border-bottom: 1px solid rgba(255, 0, 0, 0.2);
+}
+
+.light .reply-preview {
+  background: rgba(255, 0, 0, 0.06);
+}
+
+.dark .reply-preview {
+  background: rgba(255, 0, 0, 0.1);
+}
+
+.reply-preview-inner {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.reply-preview-label {
+  font-size: 12px;
+  color: #ff0000;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.reply-preview-text {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.75;
+}
+
+.reply-cancel-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  flex-shrink: 0;
+  opacity: 0.6;
+  padding: 2px 6px;
+  transition: opacity 0.15s ease;
+}
+
+.reply-cancel-btn:hover {
+  opacity: 1;
+}
+
+.light .reply-cancel-btn {
+  color: black;
+}
+
+.dark .reply-cancel-btn {
+  color: white;
+}
+
+.reply-quote {
+  display: block;
+  font-size: 12px;
+  border-radius: 6px;
+  padding: 5px 8px;
+  margin-bottom: 4px;
+  border-left: 3px solid #ff0000;
+  box-sizing: border-box;
+  min-width: 0;
+  text-align: left;
+}
+
+.light .reply-quote {
+  background: rgba(0, 0, 0, 0.06);
+  color: black;
+}
+
+.dark .reply-quote {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+
+.reply-quote-name {
+  font-weight: 700;
+  color: #ff0000;
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+
+.reply-quote-text {
+  white-space: normal;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  opacity: 0.8;
+  max-width: 100%;
+  word-break: break-word;
+}
+.input-row textarea {
+  max-height: 120px;
+  overflow-y: auto;
+  resize: none;
+}
+.contact-item .flex-grow-1 {
+  min-width: 0;
+  overflow: hidden;
+}
+.attach-btn {
+  background: #ff0000;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, transform 0.15s ease;
+  position: relative;
+  padding: 0;
+}
+
+.attach-btn:hover {
+  background: #cc0000;
+  transform: scale(1.1);
+}
+
+.attach-btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: -130%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: black;
+  color: white;
+  font-size: 12px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.attach-btn:hover::after {
+  opacity: 1;
+}
+
+.msg-media {
+  max-width: 220px;
+  max-height: 180px;
+  border-radius: 10px;
+  display: block;
+  cursor: pointer;
+  object-fit: cover;
+}
+
+.msg-media-wrap {
+  margin-bottom: 4px;
+}
+.media-preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: 1px solid rgba(255, 0, 0, 0.2);
+  gap: 10px;
+}
+
+.light .media-preview-bar {
+  background: rgba(255, 0, 0, 0.05);
+}
+
+.dark .media-preview-bar {
+  background: rgba(255, 0, 0, 0.1);
+}
+
+.media-preview-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.media-preview-thumb {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 2px solid #ff0000;
+  flex-shrink: 0;
+}
+
+.light .media-preview-cancel {
+  color: black;
+}
+
+.dark .media-preview-cancel {
+  color: white;
+}
+
+.media-preview-cancel:hover {
+  opacity: 1;
+}
+.media-preview-item {
+  position: relative;
+  display: inline-block;
+}
+
+.media-preview-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ff0000;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  transition: background 0.2s ease, transform 0.15s ease;
+  z-index: 1;
+}
+
+.media-preview-remove:hover {
+  background: #cc0000;
+  transform: scale(1.15);
+}
+.media-preview-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.media-limit-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 0, 0, 0.9);
+  color: #fff;
+  padding: 16px 28px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 1.1rem;
+  letter-spacing: 0.5px;
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
+  z-index: 9999;
+  animation: fadeInOut 3s ease forwards;
+}
+.media-clear-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  flex-shrink: 0;
+  opacity: 0.6;
+  padding: 2px 6px;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  position: relative;
+}
+
+.light .media-clear-btn {
+  color: black;
+}
+
+.dark .media-clear-btn {
+  color: white;
+}
+
+.media-clear-btn:hover {
+  opacity: 1;
+  transform: scale(1.15);
+}
+
+.media-clear-btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: -130%;
+  right: 0;
+  left: auto;
+  transform: none;
+  background: black;
+  color: white;
+  font-size: 12px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 99999;
+}
+
+.media-clear-btn:hover::after {
+  opacity: 1;
 }
 </style>
