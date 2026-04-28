@@ -725,7 +725,12 @@
               ✕
             </button>
           </div>
-          <div ref="messagesBox" class="messages flex-grow-1 p-3">
+          <div
+            ref="messagesBox"
+            class="messages flex-grow-1 p-3"
+            @dragover.prevent
+            @drop.prevent="handleDrop"
+          >
             <div
               v-for="(msg, index) in selectedChat?.messages || []"
               :key="index"
@@ -817,7 +822,19 @@
                         class="msg-media"
                         @click="openLightbox(m)"
                       />
-                      <video v-else :src="m.url" class="msg-media" controls />
+                      <video v-else-if="m.type === 'video'" :src="m.url" class="msg-media" controls />
+                      <div v-else class="msg-file">
+                        <span class="msg-file-icon">📄</span>
+                        <div class="msg-file-info">
+                          <span class="msg-file-name">{{ m.name }}</span>
+                          <a :href="m.url" :download="m.name" class="msg-file-download">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
+                              <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+                              <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
+                            </svg>
+                          </a>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <span
@@ -927,18 +944,13 @@
                   :key="i"
                   class="media-preview-item"
                 >
-                  <img
-                    v-if="media.type === 'image'"
-                    :src="media.url"
-                    class="media-preview-thumb"
-                  />
-                  <video v-else :src="media.url" class="media-preview-thumb" />
-                  <button
-                    class="media-preview-remove"
-                    @click="pendingMedia.splice(i, 1)"
-                  >
-                    ✕
-                  </button>
+                  <img v-if="media.type === 'image'" :src="media.url" class="media-preview-thumb" />
+                  <video v-else-if="media.type === 'video'" :src="media.url" class="media-preview-thumb" />
+                  <div v-else class="media-preview-file">
+                    <span>📄</span>
+                    <small class="media-preview-filename">{{ media.name }}</small>
+                  </div>
+                  <button class="media-preview-remove" @click="pendingMedia.splice(i, 1)">✕</button>
                 </div>
               </div>
               <button
@@ -953,7 +965,7 @@
               <button
                 class="attach-btn"
                 @click="triggerFileUpload"
-                data-tooltip="Add media"
+                data-tooltip="Add file"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -970,7 +982,7 @@
               <input
                 type="file"
                 ref="fileInput"
-                accept="image/*,video/*"
+                accept="*/*"
                 multiple
                 style="display: none"
                 @change="handleFileUpload"
@@ -1291,6 +1303,23 @@ export default {
     },
   },
   methods: {
+    handleDrop(event) {
+      if (!this.selectedChat) return;
+      const files = Array.from(event.dataTransfer.files);
+      for (const file of files) {
+        if (this.pendingMedia.length >= 10) {
+          this.showMediaLimitToast = true;
+          setTimeout(() => { this.showMediaLimitToast = false; }, 3000);
+          break;
+        }
+        const url = URL.createObjectURL(file);
+        let type = 'file';
+        if (file.type.startsWith("video")) type = "video";
+        else if (file.type.startsWith("image")) type = "image";
+        this.pendingMedia.push({ type, url, name: file.name });
+      }
+      this.$nextTick(() => this.$refs.messageInput?.focus());
+    },
     handleSpecialAction() {
       if (this.viewingSettings) return;
       
@@ -1391,14 +1420,14 @@ export default {
       for (const file of files) {
         if (this.pendingMedia.length >= 10) {
           this.showMediaLimitToast = true;
-          setTimeout(() => {
-            this.showMediaLimitToast = false;
-          }, 3000);
+          setTimeout(() => { this.showMediaLimitToast = false; }, 3000);
           break;
         }
         const url = URL.createObjectURL(file);
-        const type = file.type.startsWith("video") ? "video" : "image";
-        this.pendingMedia.push({ type, url });
+        let type = 'file';
+        if (file.type.startsWith("video")) type = "video";
+        else if (file.type.startsWith("image")) type = "image";
+        this.pendingMedia.push({ type, url, name: file.name });
       }
 
       event.target.value = "";
@@ -1720,7 +1749,9 @@ export default {
       this.selectedChat.lastMessage = this.pendingMedia.length
         ? this.pendingMedia.some((m) => m.type === "video")
           ? "🎥 Video"
-          : "🖼️ Image"
+          : this.pendingMedia.some((m) => m.type === "image")
+            ? "🖼️ Image"
+            : "📄 " + this.pendingMedia[0].name
         : this.newMessage;
 
       this.newMessage = "";
@@ -1782,7 +1813,9 @@ export default {
       if (!previewText && msg.media?.length) {
         const hasVideo = msg.media.some((m) => m.type === "video");
         const hasImage = msg.media.some((m) => m.type === "image");
-        if (hasVideo && hasImage) previewText = "🖼️ Image & 🎬 Video";
+        const hasFile = msg.media.some((m) => m.type === "file");
+        if (hasFile) previewText = "📄 File";
+        else if (hasVideo && hasImage) previewText = "🖼️ Image & 🎬 Video";
         else if (hasVideo) previewText = "🎬 Video";
         else previewText = "🖼️ Image";
       }
@@ -3764,5 +3797,94 @@ export default {
 .delete-confirm-no:hover {
   background: #ff0000;
   color: white;
+}
+.media-preview-file {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  border: 2px solid #ff0000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+  overflow: hidden;
+  padding: 4px;
+}
+
+.light .media-preview-file {
+  background: rgba(255, 0, 0, 0.05);
+}
+
+.dark .media-preview-file {
+  background: rgba(255, 0, 0, 0.1);
+}
+
+.media-preview-filename {
+  font-size: 9px;
+  text-align: center;
+  word-break: break-all;
+  line-height: 1.2;
+  max-height: 24px;
+  overflow: hidden;
+}
+.msg-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 2px solid #ff0000;
+  max-width: 440px;
+  white-space: nowrap;
+}
+
+.light .msg-file {
+  background: rgba(255, 0, 0, 0.05);
+}
+
+.dark .msg-file {
+  background: rgba(255, 0, 0, 0.08);
+}
+
+.msg-file-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.msg-file-info {
+  display: flex;
+  flex-direction: row;
+  min-width: 0;
+  gap: 4px;
+}
+
+.msg-file-name {
+  font-size: 12px;
+  font-weight: 600;
+  word-break: break-all;
+  line-height: 1.3;
+}
+
+.light .msg-file-name {
+  color: black;
+}
+
+.dark .msg-file-name {
+  color: white;
+}
+
+.msg-file-download {
+  display: flex;
+  align-items: center;
+  color: #ff0000;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  width: fit-content;
+}
+
+.msg-file-download:hover {
+  transform: scale(1.2);
+  opacity: 0.8;
 }
 </style>
