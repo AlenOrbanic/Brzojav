@@ -286,7 +286,94 @@
         </div>
       </div>
       <div class="chat-area d-flex flex-column">
-        <div v-if="viewingOwnProfile" class="contact-info-wrapper">
+        <div v-if="viewingSettings" class="contact-info-wrapper">
+          <div class="settings-view">
+            <div class="settings-title">Settings</div>
+            <div class="settings-row">
+              <span class="settings-label">Last seen</span>
+              <div class="settings-toggle-group">
+                <button
+                  class="settings-toggle-btn"
+                  :class="{ active: settings.lastSeen === 'shown' }"
+                  @click="settings.lastSeen = 'shown'"
+                >Shown</button>
+                <button
+                  class="settings-toggle-btn"
+                  :class="{ active: settings.lastSeen === 'hidden' }"
+                  @click="settings.lastSeen = 'hidden'"
+                >Hidden</button>
+              </div>
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">Message notifications</span>
+              <div class="settings-toggle-group">
+                <button
+                  class="settings-toggle-btn"
+                  :class="{ active: settings.messageNotifications === 'on' }"
+                  @click="settings.messageNotifications = 'on'"
+                >On</button>
+                <button
+                  class="settings-toggle-btn"
+                  :class="{ active: settings.messageNotifications === 'off' }"
+                  @click="settings.messageNotifications = 'off'"
+                >Off</button>
+              </div>
+            </div>
+            <div class="settings-row">
+              <span class="settings-label">Allow messages from strangers</span>
+              <div class="settings-toggle-group">
+                <button
+                  class="settings-toggle-btn"
+                  :class="{ active: settings.allowStrangers === 'on' }"
+                  @click="settings.allowStrangers = 'on'"
+                >On</button>
+                <button
+                  class="settings-toggle-btn"
+                  :class="{ active: settings.allowStrangers === 'off' }"
+                  @click="settings.allowStrangers = 'off'"
+                >Off</button>
+              </div>
+            </div>
+            <div class="settings-row settings-row-column">
+              <div class="d-flex align-items-center justify-content-between w-100">
+                <span class="settings-label">Blocked accounts</span>
+                <button class="settings-expand-btn" @click="showBlockedAccounts = !showBlockedAccounts">
+                  {{ showBlockedAccounts ? '▲' : '▼' }}
+                </button>
+              </div>
+              <div v-if="showBlockedAccounts" class="blocked-list">
+                <div v-if="chats.filter(c => c.blocked).length === 0" class="blocked-empty">
+                  No blocked accounts
+                </div>
+                <div
+                  v-for="chat in chats.filter(c => c.blocked)"
+                  :key="chat.id"
+                  class="blocked-item"
+                >
+                  <img :src="chat.avatar" class="rounded-circle avatar-border" width="36" height="36" />
+                  <div class="blocked-info">
+                    <div class="fw-semibold">{{ chat.name }}</div>
+                    <small class="username-tag">{{ chat.username }}</small>
+                  </div>
+                  <button class="unblock-btn" @click="chat.blocked = false">Unblock</button>
+                </div>
+              </div>
+            </div>
+            <div class="settings-row">
+              <button class="delete-account-btn" @click="showDeleteConfirm = true">Delete account</button>
+            </div>
+            <div v-if="showDeleteConfirm" class="delete-confirm-overlay">
+              <div class="delete-confirm-box">
+                <div class="delete-confirm-text">Are you sure you want to delete your account? This cannot be undone.</div>
+                <div class="delete-confirm-actions">
+                  <button class="delete-confirm-yes" @click="showDeleteConfirm = false">Yes</button>
+                  <button class="delete-confirm-no" @click="showDeleteConfirm = false">No</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-else-if="viewingOwnProfile" class="contact-info-wrapper">
           <button class="back-btn" @click="viewingOwnProfile = false">← Back</button>
           <div class="contact-info-view d-flex flex-column align-items-center p-5">
 
@@ -312,7 +399,7 @@
                 </svg>
               </template>
             </div>
-            <div class="d-flex align-items-center gap-2 mb-1">
+            <div class="d-flex align-items-center gap-2 mb-2">
               <template v-if="editingUserField === 'username'">
                 <input v-model="editingUserInput" class="chat-name-input" placeholder="@username..." @keydown.enter="saveUserField" @blur="saveUserField" autofocus />
               </template>
@@ -324,13 +411,25 @@
                 </svg>
               </template>
             </div>
-            <div class="d-flex align-items-center gap-2 mb-3">
+            <div class="d-flex align-items-center gap-2 mb-2">
               <template v-if="editingUserField === 'phone'">
                 <input v-model="editingUserInput" class="chat-name-input" placeholder="Phone number..." @keydown.enter="saveUserField" @blur="saveUserField" autofocus />
               </template>
               <template v-else>
                 <span class="contact-meta fs-6">Phone: {{ user.phone }}</span>
                 <svg @click="startEditUserField('phone')" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-square chat-name-edit-icon" viewBox="0 0 16 16" style="cursor:pointer;flex-shrink:0">
+                  <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                  <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
+                </svg>
+              </template>
+            </div>
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <template v-if="editingUserField === 'email'">
+                <input v-model="editingUserInput" class="chat-name-input" placeholder="Email..." @keydown.enter="saveUserField" @blur="saveUserField" autofocus />
+              </template>
+              <template v-else>
+                <span class="contact-meta fs-6">Email: {{ user.email }}</span>
+                <svg @click="startEditUserField('email')" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-square chat-name-edit-icon" viewBox="0 0 16 16" style="cursor:pointer;flex-shrink:0">
                   <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
                   <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
                 </svg>
@@ -448,7 +547,7 @@
           </div>
         </div>
 
-        <template v-else>
+        <template v-else-if="!viewingSettings">
           <div
             class="chat-header border-bottom p-3 d-flex align-items-center justify-content-between"
           >
@@ -968,6 +1067,14 @@ export default {
   },
   data() {
     return {
+      viewingSettings: false,
+      settings: {
+        lastSeen: 'shown',
+        messageNotifications: 'on',
+        allowStrangers: 'on',
+      },
+      showBlockedAccounts: false,
+      showDeleteConfirm: false,
       _skipNextOutsideClick: false,
       showNewContactView: false,
       newContactSearch: "",
@@ -1006,6 +1113,7 @@ export default {
         name: "Your Name",
         username: "@yourname",
         phone: "+1 555 000 0000",
+        email: "templatemail@gmail.com",
         avatar: "https://i.pinimg.com/736x/fa/44/28/fa442865013215368d3e6776730a9bf2.jpg",
         createdAt: "April 28, 2026",
       },
@@ -1183,6 +1291,17 @@ export default {
     },
   },
   methods: {
+    handleSpecialAction() {
+      if (this.viewingSettings) return;
+      
+      this.viewingContactInfo = false;
+      this.contactInfoData = null;
+      this.viewingOwnProfile = false;
+      this.viewingSettings = true;
+      this.selectedChat = null;
+      this.showBlockedAccounts = false;
+      this.showDeleteConfirm = false;
+    },
     sendInvite() {
       this.newContactSearch = "";
       this.showInviteSent = true;
@@ -1260,6 +1379,7 @@ export default {
       this.selectedChat = newGroup;
       this.viewingOwnProfile = false;
       this.viewingContactInfo = false;
+      this.viewingSettings = false;
     },
     triggerFileUpload() {
       this.$refs.fileInput.click();
@@ -1380,6 +1500,7 @@ export default {
       this.viewingContactInfo = false;
       this.contactInfoData = null;
       this.viewingOwnProfile = false;
+      this.viewingSettings = false;
       this.$nextTick(this.scrollToBottom);
     },
     closeChat(chat) {
@@ -1469,6 +1590,7 @@ export default {
       this.contactInfoData = chat;
       this.viewingContactInfo = true;
       this.viewingOwnProfile = false;
+      this.viewingSettings = false;
       this.closeHeaderMenu();
     },
     muteChat(chat) {
@@ -1527,6 +1649,7 @@ export default {
       this.contactInfoData = chat;
       this.viewingContactInfo = true;
       this.viewingOwnProfile = false;
+      this.viewingSettings = false;
       this.closeHeaderMenu();
     },
     logout() {
@@ -1720,6 +1843,7 @@ export default {
     },
     goToProfile() {
       this.viewingOwnProfile = true;
+      this.viewingSettings = false;
       this.selectedChat = null;
       this.viewingContactInfo = false;
     },
@@ -3422,5 +3546,223 @@ export default {
   text-align: center;
   margin-top: 8px;
   margin-bottom: 8px;
+}
+.profile-fields {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+.settings-view {
+  padding: 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 560px;
+  margin: 0 auto;
+  width: 100%;
+}
+.settings-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #ff0000;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 0, 0, 0.15);
+  gap: 12px;
+}
+.settings-row-column {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.settings-label {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.settings-toggle-group {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.settings-toggle-btn {
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 2px solid #ff0000;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.light .settings-toggle-btn {
+  color: black;
+}
+
+.dark .settings-toggle-btn {
+  color: white;
+}
+
+.settings-toggle-btn.active {
+  background: #ff0000;
+  color: white;
+}
+
+.settings-expand-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #ff0000;
+  padding: 2px 6px;
+}
+
+.blocked-list {
+  width: 100%;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.blocked-empty {
+  font-size: 14px;
+  opacity: 0.6;
+  padding: 4px 0;
+}
+
+.blocked-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+
+.light .blocked-item {
+  background: rgba(255, 0, 0, 0.05);
+}
+
+.dark .blocked-item {
+  background: rgba(255, 0, 0, 0.1);
+}
+
+.blocked-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.unblock-btn {
+  background: none;
+  border: 2px solid #ff0000;
+  color: #ff0000;
+  border-radius: 16px;
+  padding: 3px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.unblock-btn:hover {
+  background: #ff0000;
+  color: white;
+}
+
+.delete-account-btn {
+  background: none;
+  border: none;
+  color: #ff0000;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  transition: opacity 0.2s ease;
+}
+
+.delete-account-btn:hover {
+  opacity: 0.7;
+}
+
+.delete-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+}
+
+.delete-confirm-box {
+  background: white;
+  border-radius: 12px;
+  padding: 28px 32px;
+  max-width: 360px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dark .delete-confirm-box {
+  background: #1e1e1e;
+  color: white;
+}
+
+.delete-confirm-text {
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.delete-confirm-yes {
+  background: #ff0000;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.delete-confirm-yes:hover {
+  background: #cc0000;
+}
+
+.delete-confirm-no {
+  background: none;
+  border: 2px solid #ff0000;
+  color: #ff0000;
+  border-radius: 8px;
+  padding: 8px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.delete-confirm-no:hover {
+  background: #ff0000;
+  color: white;
 }
 </style>
