@@ -103,11 +103,14 @@
                 <input
                   v-model="newContactSearch"
                   type="text"
-                  class="form-control mb-3"
+                  class="form-control"
                   placeholder="Search @username"
+                  @focus="showInviteSent = false"
                 />
+                <div v-if="showInviteSent" class="invite-sent-text">Invite sent!</div>
                 <button
                   class="btn theme-action-btn send-invite-btn action-btn-hover"
+                  @click="sendInvite"
                 >
                   Send invite
                 </button>
@@ -226,6 +229,7 @@
               class="contact-item d-flex justify-content-between align-items-center"
               :class="{ active: selectedChat?.id === chat.id }"
               @click="selectChat(chat)"
+              @contextmenu.prevent="openChatMenu($event, chat)"
             >
               <div class="d-flex align-items-center flex-grow-1">
                 <img
@@ -282,17 +286,72 @@
         </div>
       </div>
       <div class="chat-area d-flex flex-column">
-        <div v-if="viewingContactInfo" class="contact-info-wrapper">
-          <button class="back-btn" @click="closeContactInfo">← Back</button>
+        <div v-if="viewingOwnProfile" class="contact-info-wrapper">
+          <button class="back-btn" @click="viewingOwnProfile = false">← Back</button>
+          <div class="contact-info-view d-flex flex-column align-items-center p-5">
 
+            <div class="profile-avatar-wrap mb-3">
+              <img :src="user.avatar" class="rounded-circle" width="80" height="80" style="border: 3px solid #ff0000; box-shadow: 0 0 10px rgba(255,0,0,0.5);" />
+              <button class="profile-edit-icon" @click="startEditUserField('avatar')" data-tooltip="Edit photo">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                  <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                  <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
+                </svg>
+              </button>
+            </div>
+            <input v-if="editingUserField === 'avatar'" v-model="editingUserInput" class="form-control mb-2" style="max-width:320px;" placeholder="Paste image URL..." @keydown.enter="saveUserField" @blur="saveUserField" autofocus />
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <template v-if="editingUserField === 'name'">
+                <input v-model="editingUserInput" class="chat-name-input" placeholder="Your name..." @keydown.enter="saveUserField" @blur="saveUserField" autofocus />
+              </template>
+              <template v-else>
+                <span class="fw-bold fs-5">{{ user.name }}</span>
+                <svg @click="startEditUserField('name')" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square chat-name-edit-icon" viewBox="0 0 16 16" style="cursor:pointer;flex-shrink:0">
+                  <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                  <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
+                </svg>
+              </template>
+            </div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <template v-if="editingUserField === 'username'">
+                <input v-model="editingUserInput" class="chat-name-input" placeholder="@username..." @keydown.enter="saveUserField" @blur="saveUserField" autofocus />
+              </template>
+              <template v-else>
+                <span class="username-tag fs-6">Username: {{ user.username }}</span>
+                <svg @click="startEditUserField('username')" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-square chat-name-edit-icon" viewBox="0 0 16 16" style="cursor:pointer;flex-shrink:0">
+                  <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                  <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
+                </svg>
+              </template>
+            </div>
+            <div class="d-flex align-items-center gap-2 mb-3">
+              <template v-if="editingUserField === 'phone'">
+                <input v-model="editingUserInput" class="chat-name-input" placeholder="Phone number..." @keydown.enter="saveUserField" @blur="saveUserField" autofocus />
+              </template>
+              <template v-else>
+                <span class="contact-meta fs-6">Phone: {{ user.phone }}</span>
+                <svg @click="startEditUserField('phone')" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-square chat-name-edit-icon" viewBox="0 0 16 16" style="cursor:pointer;flex-shrink:0">
+                  <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                  <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
+                </svg>
+              </template>
+            </div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <span class="creation-date">Account creation date: {{ user.createdAt }}</span>
+            </div>
+
+          </div>
+        </div>
+        <div v-else-if="viewingContactInfo" class="contact-info-wrapper">
+          <button class="back-btn" @click="closeContactInfo">← Back</button>
           <div
             class="contact-info-view d-flex flex-column align-items-center justify-content-center p-5"
           >
             <img
               :src="contactInfoData.avatar"
               class="rounded-circle mb-3"
-              width="50"
-              height="50"
+              width="80"
+              height="80"
             />
             <div class="fw-bold fs-5 mb-1 d-flex align-items-center gap-2">
               <template v-if="editingChatName">
@@ -347,14 +406,15 @@
                   />
                   <div class="group-member-info">
                     <div class="fw-semibold">{{ member.name }}</div>
-                    <small class="contact-meta"
-                      >Last seen: {{ member.lastSeen }}</small
-                    >
+                      <small class="contact-meta">{{ member.username }} · Last seen: {{ member.lastSeen }}</small>
                   </div>
                 </div>
               </div>
             </template>
             <template v-else>
+              <div class="contact-meta fs-6 mb-1 username-tag">
+                {{ contactInfoData.username }}
+              </div>
               <div class="contact-meta fs-6 mb-1">
                 Last seen: {{ contactInfoData.lastSeen }}
               </div>
@@ -629,6 +689,7 @@
                     msg.sender === 'me' ? 'bubble-me' : 'bubble-other',
                     msg.reactions && msg.reactions.length ? 'has-reaction' : '',
                   ]"
+                  @contextmenu.prevent="openMessageMenu($event, msg)"
                 >
                   <div
                     v-if="msg.replyTo"
@@ -907,6 +968,7 @@ export default {
   },
   data() {
     return {
+      _skipNextOutsideClick: false,
       showNewContactView: false,
       newContactSearch: "",
       viewingContactInfo: false,
@@ -933,6 +995,7 @@ export default {
         media: null,
       },
       searchActive: false,
+      showInviteSent: false,
       chatSearchQuery: "",
       searchResults: [],
       currentSearchIndex: 0,
@@ -941,9 +1004,14 @@ export default {
       selectedGroupMembers: [],
       user: {
         name: "Your Name",
-        avatar:
-          "https://i.pinimg.com/736x/fa/44/28/fa442865013215368d3e6776730a9bf2.jpg",
+        username: "@yourname",
+        phone: "+1 555 000 0000",
+        avatar: "https://i.pinimg.com/736x/fa/44/28/fa442865013215368d3e6776730a9bf2.jpg",
+        createdAt: "April 28, 2026",
       },
+      viewingOwnProfile: false,
+      editingUserField: null,
+      editingUserInput: "",
       messageMenu: {
         visible: false,
         x: 0,
@@ -1031,6 +1099,7 @@ export default {
             "https://i.pinimg.com/736x/10/ff/74/10ff74284ea2b3957b90b9556e05dce2.jpg",
           lastMessage: "Hey!",
           phone: "+1 555 123 4567",
+          username: "@johndoe",
           pinned: false,
           pinnedAt: null,
           muted: false,
@@ -1048,6 +1117,7 @@ export default {
             "https://i.pinimg.com/originals/3e/60/44/3e6044ac70b25c8f767de5c253e521b9.gif",
           lastMessage: "Bok!!!!",
           phone: "+385 092 123 4567",
+          username: "@alenorban",
           pinned: false,
           pinnedAt: null,
           muted: false,
@@ -1065,6 +1135,7 @@ export default {
             "https://i.pinimg.com/736x/7a/58/22/7a5822bbab7afda54f48cf7d2a64284d.jpg",
           lastMessage: "Yooo!",
           phone: "+1 555 123 4567",
+          username: "@chrisbarnes",
           pinned: false,
           pinnedAt: null,
           muted: false,
@@ -1112,6 +1183,22 @@ export default {
     },
   },
   methods: {
+    sendInvite() {
+      this.newContactSearch = "";
+      this.showInviteSent = true;
+    },
+    startEditUserField(field) {
+      this.editingUserField = field;
+      this.editingUserInput = field === 'avatar' ? this.user.avatar : this.user[field];
+    },
+    saveUserField() {
+      const trimmed = this.editingUserInput.trim();
+      if (trimmed && this.editingUserField) {
+        this.user[this.editingUserField] = trimmed;
+      }
+      this.editingUserField = null;
+      this.editingUserInput = "";
+    },
     clampMenuPosition(x, y) {
       const menuWidth = 220;
       const menuHeight = 400;
@@ -1161,6 +1248,7 @@ export default {
         members: this.selectedGroupMembers.map((c) => ({
           name: c.name,
           avatar: c.avatar,
+          username: c.username,
           lastSeen: "Recently",
         })),
       };
@@ -1170,6 +1258,8 @@ export default {
       this.groupSearch = "";
       this.selectedGroupMembers = [];
       this.selectedChat = newGroup;
+      this.viewingOwnProfile = false;
+      this.viewingContactInfo = false;
     },
     triggerFileUpload() {
       this.$refs.fileInput.click();
@@ -1285,13 +1375,11 @@ export default {
       chat.hidden = false;
       this.activeChat = chat;
       this.selectedChat = chat;
-
       this.selectedChatForMenu = chat;
       this.globalSearch = "";
-
       this.viewingContactInfo = false;
       this.contactInfoData = null;
-
+      this.viewingOwnProfile = false;
       this.$nextTick(this.scrollToBottom);
     },
     closeChat(chat) {
@@ -1311,52 +1399,33 @@ export default {
         i.action.toString().includes("contactInfo"),
       );
       if (contactInfoItem) {
-        contactInfoItem.label = chat.members?.length
-          ? "👥 Group info"
-          : "👤 Contact Info";
+        contactInfoItem.label = chat.members?.length ? "👥 Group info" : "👤 Contact Info";
       }
-      const rect = event.currentTarget.getBoundingClientRect();
+
+      const previousChat = this.selectedChatForMenu;
       this.selectedChatForMenu = chat;
 
-      const pinItem = this.headerMenuItems.find((i) =>
-        i.action.toString().includes("pinChat"),
-      );
+      const pinItem = this.headerMenuItems.find((i) => i.action.toString().includes("pinChat"));
+      const muteItem = this.headerMenuItems.find((i) => i.action.toString().includes("muteChat"));
+      const blockItem = this.headerMenuItems.find((i) => i.action.toString().includes("blockUser"));
+      if (blockItem) blockItem.label = chat.blocked ? "🔓 Unblock" : "⛔ Block";
+      if (muteItem) muteItem.label = chat.muted ? "🔔 Unmute Notifications" : "🔕 Mute Notifications";
+      if (pinItem) pinItem.label = chat.pinned ? "📍 Unpin Conversation" : "📌 Pin Conversation";
 
-      const muteItem = this.headerMenuItems.find((i) =>
-        i.action.toString().includes("muteChat"),
-      );
-
-      const blockItem = this.headerMenuItems.find((i) =>
-        i.action.toString().includes("blockUser"),
-      );
-
-      if (blockItem) {
-        blockItem.label = chat.blocked ? "🔓 Unblock" : "⛔ Block";
+      if (this.headerMenu.visible && previousChat === chat) {
+        this.closeHeaderMenu();
+        return;
       }
 
-      if (muteItem) {
-        muteItem.label = chat.muted
-          ? "🔔 Unmute Notifications"
-          : "🔕 Mute Notifications";
-      }
-
-      if (pinItem) {
-        pinItem.label = chat.pinned
-          ? "📍 Unpin Conversation"
-          : "📌 Pin Conversation";
-      }
       this.headerMenu.visible = true;
       this.headerMenu.x = 0;
       this.headerMenu.y = 0;
       this.$nextTick(() => {
-        const menuEl = this.$el.querySelector(".header-menu");
-        const pos = this.clampMenuPosition(rect.right + 10, rect.bottom - 10);
+        const pos = this.clampMenuPosition(event.clientX + 32, event.clientY + 8);
         this.headerMenu.x = pos.x;
         this.headerMenu.y = pos.y;
-        this.headerMenu.visible = true;
       });
     },
-
     toggleHeaderMenu(event) {
       this.selectedChatForMenu = this.selectedChat;
       event.stopPropagation();
@@ -1373,61 +1442,33 @@ export default {
         return;
       }
       const rect = event.currentTarget.getBoundingClientRect();
-
-      const pinItem = this.headerMenuItems.find((i) =>
-        i.action.toString().includes("pinChat"),
-      );
-
-      const blockItem = this.headerMenuItems.find((i) =>
-        i.action.toString().includes("blockUser"),
-      );
-
-      const muteItem = this.headerMenuItems.find((i) =>
-        i.action.toString().includes("muteChat"),
-      );
-
+      const pinItem = this.headerMenuItems.find((i) => i.action.toString().includes("pinChat"));
+      const blockItem = this.headerMenuItems.find((i) => i.action.toString().includes("blockUser"));
+      const muteItem = this.headerMenuItems.find((i) => i.action.toString().includes("muteChat"));
       if (this.selectedChatForMenu) {
-        if (pinItem) {
-          pinItem.label = this.selectedChatForMenu.pinned
-            ? "📍 Unpin Conversation"
-            : "📌 Pin Conversation";
-        }
-
-        if (blockItem) {
-          blockItem.label = this.selectedChatForMenu.blocked
-            ? "🔓 Unblock"
-            : "⛔ Block";
-        }
-
-        if (muteItem) {
-          muteItem.label = this.selectedChatForMenu.muted
-            ? "🔔 Unmute Notifications"
-            : "🔕 Mute Notifications";
-        }
+        if (pinItem) pinItem.label = this.selectedChatForMenu.pinned ? "📍 Unpin Conversation" : "📌 Pin Conversation";
+        if (blockItem) blockItem.label = this.selectedChatForMenu.blocked ? "🔓 Unblock" : "⛔ Block";
+        if (muteItem) muteItem.label = this.selectedChatForMenu.muted ? "🔔 Unmute Notifications" : "🔕 Mute Notifications";
       }
+      this._skipNextOutsideClick = true;
       this.headerMenu.visible = true;
       this.headerMenu.x = 0;
       this.headerMenu.y = 0;
       this.$nextTick(() => {
-        const menuEl = this.$el.querySelector(".header-menu");
         const pos = this.clampMenuPosition(rect.right - 220, rect.bottom + 5);
         this.headerMenu.x = pos.x;
         this.headerMenu.y = pos.y;
-        this.headerMenu.visible = true;
       });
     },
-
     closeHeaderMenu() {
       this.headerMenu.visible = false;
     },
-
     contactInfo(chat) {
       if (!chat) return;
-
       this.activeChat = chat;
       this.contactInfoData = chat;
       this.viewingContactInfo = true;
-
+      this.viewingOwnProfile = false;
       this.closeHeaderMenu();
     },
     muteChat(chat) {
@@ -1462,7 +1503,6 @@ export default {
 
       chat.blocked = !chat.blocked;
 
-      // optional UX behavior
       if (chat.blocked && this.selectedChat?.id === chat.id) {
         this.newMessage = "";
       }
@@ -1486,7 +1526,7 @@ export default {
       this.activeChat = chat;
       this.contactInfoData = chat;
       this.viewingContactInfo = true;
-
+      this.viewingOwnProfile = false;
       this.closeHeaderMenu();
     },
     logout() {
@@ -1507,7 +1547,6 @@ export default {
         this.closeMessageMenu();
       }
 
-      // 🔍 ENTER navigation for search
       if (this.searchActive && this.searchResults.length) {
         if (event.key === "Enter") {
           event.preventDefault();
@@ -1518,19 +1557,19 @@ export default {
     handleClickOutside(event) {
       const messageMenu = this.$el.querySelector(".message-menu");
       const headerMenu = this.$el.querySelector(".header-menu");
-
       const isHeaderButton = event.target.closest(".header-icon");
       const isContactMenuBtn = event.target.closest(".contact-menu-btn");
+      const isContactItem = event.target.closest(".contact-item");
 
       if (messageMenu && !messageMenu.contains(event.target)) {
         this.closeMessageMenu();
       }
-
       if (
         headerMenu &&
         !headerMenu.contains(event.target) &&
         !isHeaderButton &&
-        !isContactMenuBtn
+        !isContactMenuBtn &&
+        !isContactItem
       ) {
         this.closeHeaderMenu();
       }
@@ -1680,10 +1719,9 @@ export default {
       this.closeMessageMenu();
     },
     goToProfile() {
-      this.$router.push("/profile");
-    },
-    handleSpecialAction() {
-      alert("New button clicked!");
+      this.viewingOwnProfile = true;
+      this.selectedChat = null;
+      this.viewingContactInfo = false;
     },
   },
 };
@@ -3228,7 +3266,7 @@ export default {
   padding: 5px 16px;
   font-size: 14px;
   font-weight: bold;
-  margin-top: -7px;
+  margin-top: 8px;
 }
 .light .theme-action-btn:hover {
   background-color: #8d0000;
@@ -3313,6 +3351,7 @@ export default {
   border: 1px solid rgba(255, 0, 0, 0.2);
   border-radius: 10px;
   padding: 8px;
+  text-align: left;
 }
 
 .group-member-item {
@@ -3340,5 +3379,48 @@ export default {
 .header-menu.measuring {
   opacity: 0;
   pointer-events: none;
+}
+.username-tag {
+  color: #ff0000;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.profile-avatar-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.profile-edit-icon {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ff0000;
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.profile-edit-icon:hover {
+  background: #cc0000;
+  transform: scale(1.1);
+}
+.creation-date {
+  color: gray;
+  font-size: 0.9rem;
+}
+.invite-sent-text {
+  color: #ff0000;
+  font-weight: 600;
+  font-size: 14px;
+  text-align: center;
+  margin-top: 8px;
+  margin-bottom: 8px;
 }
 </style>
