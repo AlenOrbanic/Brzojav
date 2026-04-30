@@ -3,6 +3,9 @@
     <video class="bg-video" autoplay muted loop playsinline>
       <source src="../assets/framebg.mp4" type="video/mp4" />
     </video>
+
+    <!-- Topbar -->
+
     <div class="app-topbar border-bottom px-3 py-2 d-flex align-items-center">
       <h5 class="mb-0 me-2">Brzojav</h5>
       <div class="flex-spacer"></div>
@@ -45,6 +48,9 @@
     </div>
     <div class="app-body">
       <div class="sidebar border-end">
+
+        <!--Sidebar profile-->
+
         <div class="profile-section border-bottom mb-2">
           <div class="d-flex align-items-center justify-content-between w-100">
             <div
@@ -96,6 +102,9 @@
             {{ showNewChatMenu ? "← Back" : "+ New Chat / Group" }}
           </button>
         </div>
+
+        <!--Sidebar chats-->
+
         <div class="contacts">
           <template v-if="showNewChatMenu">
             <template v-if="showNewContactView">
@@ -145,7 +154,7 @@
                       height="40"
                     />
                     <div class="flex-grow-1">
-                      <div class="fw-semibold">{{ chat.name }}</div>
+                      <div class="fw-semibold">{{ chat.originalName || chat.name }}</div>
                     </div>
                     <div
                       class="group-select-circle"
@@ -286,6 +295,9 @@
         </div>
       </div>
       <div class="chat-area d-flex flex-column">
+
+        <!-- Settings -->
+
         <div v-if="viewingSettings" class="contact-info-wrapper">
           <div class="settings-view">
             <div class="settings-title">Settings</div>
@@ -373,6 +385,9 @@
             </div>
           </div>
         </div>
+
+        <!-- Profile -->
+
         <div v-else-if="viewingOwnProfile" class="contact-info-wrapper">
           <button class="back-btn" @click="viewingOwnProfile = false">← Back</button>
           <div class="contact-info-view d-flex flex-column align-items-center p-5">
@@ -441,6 +456,9 @@
 
           </div>
         </div>
+
+        <!--Contact info-->
+
         <div v-else-if="viewingContactInfo" class="contact-info-wrapper">
           <button class="back-btn" @click="closeContactInfo">← Back</button>
           <div
@@ -475,6 +493,7 @@
                   class="bi bi-pencil-square chat-name-edit-icon"
                   viewBox="0 0 16 16"
                   style="cursor: pointer; flex-shrink: 0"
+                  :data-tooltip="contactInfoData?.members?.length ? 'Change group name' : 'Change nickname'"
                 >
                   <path
                     d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"
@@ -492,22 +511,51 @@
                 {{ contactInfoData.members.length }} Members
               </div>
               <div class="group-members-list w-100 mb-3">
-                <div
-                  v-for="(member, i) in contactInfoData.members"
-                  :key="i"
-                  class="group-member-item"
-                >
-                  <img
-                    :src="member.avatar"
-                    class="rounded-circle avatar-border"
-                    width="36"
-                    height="36"
-                  />
-                  <div class="group-member-info">
-                    <div class="fw-semibold">{{ member.name }}</div>
-                      <small class="contact-meta">{{ member.username }} · Last seen: {{ member.lastSeen }}</small>
+              <div
+                v-for="(member, i) in contactInfoData.members"
+                :key="i"
+                class="group-member-item"
+              >
+                <img
+                  :src="member.avatar"
+                  class="rounded-circle avatar-border"
+                  width="36"
+                  height="36"
+                />
+                <div class="group-member-info">
+                  <div class="fw-semibold d-flex align-items-center gap-2">
+                    <template v-if="editingMember === i">
+                      <input
+                        v-model="editingMemberInput"
+                        class="chat-name-input"
+                        placeholder="Nickname..."
+                        @keydown.enter="saveMemberName(i)"
+                        @blur="saveMemberName(i)"
+                        autofocus
+                      />
+                    </template>
+                    <template v-else>
+                      {{ member.name }}
+                      <span v-if="member.isMe" style="font-size:10px;background:#ff0000;color:white;border-radius:8px;padding:1px 6px;font-weight:600;margin-left:2px;">You</span>
+                      <svg
+                        @click="startEditMember(i, member.name)"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="14"
+                        height="14"
+                        fill="currentColor"
+                        class="bi bi-pencil-square chat-name-edit-icon"
+                        viewBox="0 0 16 16"
+                        style="cursor:pointer;flex-shrink:0"
+                        data-tooltip="Change nickname"
+                      >
+                        <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                        <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
+                      </svg>
+                    </template>
                   </div>
+                  <small class="contact-meta">{{ member.username }} · Last seen: {{ member.lastSeen }}</small>
                 </div>
+              </div>
               </div>
             </template>
             <template v-else>
@@ -547,6 +595,8 @@
           </div>
         </div>
 
+        <!-- Chat -->
+
         <template v-else-if="!viewingSettings">
           <div
             class="chat-header border-bottom p-3 d-flex align-items-center justify-content-between"
@@ -579,20 +629,21 @@
                 </template>
                 <template v-else>
                   {{ selectedChat.name }}
-                  <span
-                    class="chat-name-icon-slot"
-                    @click="startEditingChatName"
+                <span
+                  class="chat-name-icon-slot"
+                  @click="startEditingChatName"
+                >
+                  <svg
+                    v-show="hoveredChatName"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    fill="currentColor"
+                    class="bi bi-pencil-square chat-name-edit-icon"
+                    viewBox="0 0 16 16"
+                    style="cursor: pointer"
+                    :data-tooltip="selectedChat?.members?.length ? 'Change group name' : 'Change nickname'"
                   >
-                    <svg
-                      v-show="hoveredChatName"
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
-                      fill="currentColor"
-                      class="bi bi-pencil-square chat-name-edit-icon"
-                      viewBox="0 0 16 16"
-                      style="cursor: pointer"
-                    >
                       <path
                         d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"
                       />
@@ -1079,6 +1130,8 @@ export default {
   },
   data() {
     return {
+      editingMember: null,
+      editingMemberInput: "",
       viewingSettings: false,
       settings: {
         lastSeen: 'shown',
@@ -1087,7 +1140,6 @@ export default {
       },
       showBlockedAccounts: false,
       showDeleteConfirm: false,
-      _skipNextOutsideClick: false,
       showNewContactView: false,
       newContactSearch: "",
       viewingContactInfo: false,
@@ -1098,7 +1150,6 @@ export default {
       globalSearch: "",
       newMessage: "",
       selectedChat: null,
-      activeChat: null,
       hoveredMessage: null,
       pinnedMessage: null,
       pendingReactMessage: null,
@@ -1215,8 +1266,8 @@ export default {
         {
           id: 1,
           name: "John Doe",
-          avatar:
-            "https://i.pinimg.com/736x/10/ff/74/10ff74284ea2b3957b90b9556e05dce2.jpg",
+          originalName: "John Doe",
+          avatar: "https://i.pinimg.com/736x/10/ff/74/10ff74284ea2b3957b90b9556e05dce2.jpg",
           lastMessage: "Hey!",
           phone: "+1 555 123 4567",
           username: "@johndoe",
@@ -1233,8 +1284,8 @@ export default {
         {
           id: 2,
           name: "Alen Orban",
-          avatar:
-            "https://i.pinimg.com/originals/3e/60/44/3e6044ac70b25c8f767de5c253e521b9.gif",
+          originalName: "Alen Orban",
+          avatar: "https://i.pinimg.com/originals/3e/60/44/3e6044ac70b25c8f767de5c253e521b9.gif",
           lastMessage: "Bok!!!!",
           phone: "+385 092 123 4567",
           username: "@alenorban",
@@ -1251,8 +1302,8 @@ export default {
         {
           id: 3,
           name: "Chris Barnes",
-          avatar:
-            "https://i.pinimg.com/736x/7a/58/22/7a5822bbab7afda54f48cf7d2a64284d.jpg",
+          originalName: "Chris Barnes",
+          avatar: "https://i.pinimg.com/736x/7a/58/22/7a5822bbab7afda54f48cf7d2a64284d.jpg",
           lastMessage: "Yooo!",
           phone: "+1 555 123 4567",
           username: "@chrisbarnes",
@@ -1287,7 +1338,8 @@ export default {
     filteredGroupChats() {
       const q = this.groupSearch.toLowerCase();
       return this.chats.filter(
-        (c) => !c.hidden && c.name.toLowerCase().includes(q),
+        (c) => !c.hidden && !c.members?.length &&
+        (c.originalName || c.name).toLowerCase().includes(q)
       );
     },
     sortedChats() {
@@ -1303,6 +1355,25 @@ export default {
     },
   },
   methods: {
+    startEditMember(index, currentName) {
+      this.editingMember = index;
+      this.editingMemberInput = currentName;
+    },
+    saveMemberName(index) {
+      const trimmed = this.editingMemberInput.trim();
+      if (trimmed && this.contactInfoData?.members?.[index]) {
+        const member = this.contactInfoData.members[index];
+        member.name = trimmed;
+        if (!this.contactInfoData.hasCustomName) {
+          this.contactInfoData.name = this.contactInfoData.members
+            .map((m) => m.name)
+            .join(", ");
+        }
+      }
+      this.editingMember = null;
+      this.editingMemberInput = "";
+    },
+    // Drag and drop u chat
     handleDrop(event) {
       if (!this.selectedChat) return;
       const files = Array.from(event.dataTransfer.files);
@@ -1335,6 +1406,7 @@ export default {
       this.newContactSearch = "";
       this.showInviteSent = true;
     },
+    // Edit ikona
     startEditUserField(field) {
       this.editingUserField = field;
       this.editingUserInput = field === 'avatar' ? this.user.avatar : this.user[field];
@@ -1369,7 +1441,12 @@ export default {
       const chat = this.selectedChat || this.contactInfoData;
       if (!chat) return;
       const trimmed = this.chatNameInput.trim();
-      if (trimmed) chat.name = trimmed;
+      if (trimmed) {
+        chat.name = trimmed;
+        if (chat.members?.length) {
+          chat.hasCustomName = true;
+        }
+      }
       this.editingChatName = false;
       this.chatNameInput = "";
     },
@@ -1380,10 +1457,45 @@ export default {
     },
     createGroup() {
       if (this.selectedGroupMembers.length < 2) return;
-      const name = this.selectedGroupMembers.map((c) => c.name).join(", ");
+
+      const memberObjects = this.selectedGroupMembers.map((c) => ({
+        name: c.originalName || c.name,
+        avatar: c.avatar,
+        username: c.username,
+        lastSeen: "Recently",
+        isMe: false,
+      }));
+
+      const allMembers = [
+        {
+          name: this.user.name,
+          avatar: this.user.avatar,
+          username: this.user.username,
+          lastSeen: "Online",
+          isMe: true,
+        },
+        {
+          name: memberObjects[0]?.name,
+          avatar: memberObjects[0]?.avatar,
+          username: memberObjects[0]?.username,
+          lastSeen: memberObjects[0]?.lastSeen,
+          isMe: memberObjects[0]?.isMe,
+        },
+        {
+          name: memberObjects[1]?.name,
+          avatar: memberObjects[1]?.avatar,
+          username: memberObjects[1]?.username,
+          lastSeen: memberObjects[1]?.lastSeen,
+          isMe: memberObjects[1]?.isMe,
+        },
+      ].filter(m => m.name);
+
+      const name = allMembers.map((m) => m.name).join(", ");
+
       const newGroup = {
         id: Date.now(),
         name,
+        hasCustomName: false,
         avatar: this.selectedGroupMembers[0].avatar,
         lastMessage: "",
         phone: "",
@@ -1393,13 +1505,9 @@ export default {
         hidden: false,
         blocked: false,
         messages: [],
-        members: this.selectedGroupMembers.map((c) => ({
-          name: c.name,
-          avatar: c.avatar,
-          username: c.username,
-          lastSeen: "Recently",
-        })),
+        members: allMembers,
       };
+
       this.chats.push(newGroup);
       this.showNewChatMenu = false;
       this.showNewGroupView = false;
@@ -1511,6 +1619,7 @@ export default {
         }
       });
     },
+    // Otvori sliku ili video u cijelosti
     openLightbox(media) {
       this.lightbox.media = media;
       this.lightbox.visible = true;
@@ -1522,7 +1631,6 @@ export default {
     },
     selectChat(chat) {
       chat.hidden = false;
-      this.activeChat = chat;
       this.selectedChat = chat;
       this.selectedChatForMenu = chat;
       this.globalSearch = "";
@@ -1600,7 +1708,6 @@ export default {
         if (blockItem) blockItem.label = this.selectedChatForMenu.blocked ? "🔓 Unblock" : "⛔ Block";
         if (muteItem) muteItem.label = this.selectedChatForMenu.muted ? "🔔 Unmute Notifications" : "🔕 Mute Notifications";
       }
-      this._skipNextOutsideClick = true;
       this.headerMenu.visible = true;
       this.headerMenu.x = 0;
       this.headerMenu.y = 0;
@@ -1615,7 +1722,6 @@ export default {
     },
     contactInfo(chat) {
       if (!chat) return;
-      this.activeChat = chat;
       this.contactInfoData = chat;
       this.viewingContactInfo = true;
       this.viewingOwnProfile = false;
@@ -1645,9 +1751,6 @@ export default {
     closeContactInfo() {
       this.viewingContactInfo = false;
       this.contactInfoData = null;
-      if (this.activeChat) {
-        this.selectedChat = this.activeChat;
-      }
     },
     blockUser(chat) {
       if (!chat) return;
@@ -1674,7 +1777,6 @@ export default {
     },
     openSharedMedia(chat) {
       if (!chat) return;
-      this.activeChat = chat;
       this.contactInfoData = chat;
       this.viewingContactInfo = true;
       this.viewingOwnProfile = false;
@@ -1688,11 +1790,6 @@ export default {
         this.showLogoutMessage = false;
         this.$router.replace("/login");
       }, 2000);
-    },
-    autoGrow() {
-      const el = this.$refs.messageInput;
-      el.style.height = "auto";
-      el.style.height = el.scrollHeight + "px";
     },
     handleKeyDown(event) {
       if (event.key === "Escape") {
@@ -1739,9 +1836,11 @@ export default {
       if (!this.selectedChat || this.selectedChat.blocked) return;
       if (!this.newMessage.trim() && !this.pendingMedia.length) return;
 
+      const text = this.newMessage.replace(/\n+/g, ' ').trim();
+
       this.selectedChat.messages.push({
         sender: "me",
-        text: this.newMessage,
+        text: text,
         media: this.pendingMedia.length ? [...this.pendingMedia] : null,
         replyTo: this.replyingTo || null,
       });
@@ -1752,7 +1851,7 @@ export default {
           : this.pendingMedia.some((m) => m.type === "image")
             ? "🖼️ Image"
             : "📄 " + this.pendingMedia[0].name
-        : this.newMessage;
+        : text;
 
       this.newMessage = "";
       this.replyingTo = null;
@@ -1981,10 +2080,11 @@ export default {
 }
 
 .message {
-  display: block;
+  display: inline-block;
   word-break: break-word;
   overflow-wrap: break-word;
-  white-space: pre-wrap;
+  white-space: pre-line;
+  text-align: left !important;
 }
 
 .light .sent {
@@ -2230,21 +2330,6 @@ export default {
   transform: translateX(6px);
 }
 
-.message-dots {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 18px;
-  font-weight: bold;
-  opacity: 1;
-  padding: 0;
-  margin: 0 6px;
-}
-
-.message-dots:hover {
-  opacity: 1;
-}
-
 .message-menu {
   position: fixed;
   background: white;
@@ -2431,35 +2516,9 @@ export default {
   color: white;
 }
 
-.header-menu {
-  position: fixed;
-  background: white;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  border-radius: 8px;
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  z-index: 10000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  min-width: 180px;
-}
-
 .dark .header-menu {
   background: #1e1e1e;
   border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.header-menu button {
-  background: none;
-  border: none;
-  padding: 8px 10px;
-  text-align: left;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.header-menu button:hover {
-  background: rgba(0, 0, 0, 0.05);
 }
 
 .dark .header-menu button {
@@ -3216,13 +3275,6 @@ export default {
   background: rgba(255, 0, 0, 0.1);
 }
 
-.media-preview-inner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
 .media-preview-thumb {
   width: 60px;
   height: 60px;
@@ -3342,55 +3394,7 @@ export default {
 .media-clear-btn:hover::after {
   opacity: 1;
 }
-.new-chat-menu {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 6px;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 0, 0, 0.2);
-}
 
-.new-chat-option {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  text-align: left;
-  width: 100%;
-  transition: background 0.2s ease;
-}
-
-.light .new-chat-option {
-  color: black;
-}
-
-.dark .new-chat-option {
-  color: white;
-}
-
-.light .new-chat-option:hover {
-  background: rgba(255, 0, 0, 0.08);
-}
-
-.dark .new-chat-option:hover {
-  background: rgba(255, 0, 0, 0.15);
-}
-
-.icon-white {
-  color: white;
-  font-size: 18px;
-}
-
-.icon-black {
-  color: black;
-  font-size: 18px;
-}
 .new-chat-icon-wrap {
   width: 40px;
   height: 40px;
@@ -3473,6 +3477,7 @@ export default {
 .chat-name-edit-icon {
   opacity: 0.7;
   transition: opacity 0.15s ease, transform 0.15s ease;
+  position: relative;
 }
 
 .chat-name-edit-icon:hover {
@@ -3579,12 +3584,6 @@ export default {
   text-align: center;
   margin-top: 8px;
   margin-bottom: 8px;
-}
-.profile-fields {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
 }
 .settings-view {
   padding: 16px 32px;
@@ -3886,5 +3885,25 @@ export default {
 .msg-file-download:hover {
   transform: scale(1.2);
   opacity: 0.8;
+}
+.chat-name-edit-icon::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: -130%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: black;
+  color: white;
+  font-size: 11px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 9999;
+}
+.chat-name-edit-icon:hover::after {
+  opacity: 1;
 }
 </style>
