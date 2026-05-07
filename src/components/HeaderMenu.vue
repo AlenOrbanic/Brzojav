@@ -99,4 +99,8 @@ export default {
 .dark .header-menu button:hover {
   background: rgba(255, 255, 255, 0.1);
 }
+.header-menu.measuring {
+  opacity: 0;
+  pointer-events: none;
+}
 </style>

@@ -21,7 +21,7 @@
 
         <button
           class="theme-btn"
-          @click="handleSpecialAction"
+          @click="openSettings"
           data-tooltip="Settings"
         >
           <svg
@@ -57,12 +57,7 @@
               class="d-flex align-items-center flex-grow-1"
               @click="goToProfile"
             >
-              <img
-                :src="user.avatar"
-                class="rounded-circle me-3 avatar-border"
-                width="40"
-                height="40"
-              />
+              <AvatarImg :src="user.avatar" :size="40" :margin="3" />
               <div>
                 <div class="fw-bold">{{ user.name }}</div>
                 <small class="text-muted">View Profile</small>
@@ -147,12 +142,7 @@
                     class="contact-item d-flex align-items-center"
                     @click="toggleGroupMember(chat)"
                   >
-                    <img
-                      :src="chat.avatar"
-                      class="rounded-circle me-2 avatar-border"
-                      width="40"
-                      height="40"
-                    />
+                    <AvatarImg :src="chat.avatar" :size="40" :margin="2" />
                     <div class="flex-grow-1">
                       <div class="fw-semibold">{{ chat.originalName || chat.name }}</div>
                     </div>
@@ -241,12 +231,7 @@
               @contextmenu.prevent="openChatMenu($event, chat)"
             >
               <div class="d-flex align-items-center flex-grow-1">
-                <img
-                  :src="chat.avatar"
-                  class="rounded-circle me-2 avatar-border"
-                  width="40"
-                  height="40"
-                />
+                <AvatarImg :src="chat.avatar" :size="40" :margin="2" />
                 <div class="flex-grow-1">
                   <div class="fw-semibold">
                     {{ chat.name }}
@@ -362,7 +347,7 @@
                   :key="chat.id"
                   class="blocked-item"
                 >
-                  <img :src="chat.avatar" class="rounded-circle avatar-border" width="36" height="36" />
+                  <AvatarImg :src="chat.avatar" :size="36" />
                   <div class="blocked-info">
                     <div class="fw-semibold">{{ chat.name }}</div>
                     <small class="username-tag">{{ chat.username }}</small>
@@ -391,65 +376,48 @@
         <div v-else-if="viewingOwnProfile" class="contact-info-wrapper">
           <button class="back-btn" @click="viewingOwnProfile = false">← Back</button>
           <div class="contact-info-view d-flex flex-column align-items-center p-5">
-
-            <div class="profile-avatar-wrap mb-3">
-              <img :src="user.avatar" class="rounded-circle" width="80" height="80" style="border: 3px solid #ff0000; box-shadow: 0 0 10px rgba(255,0,0,0.5);" />
-              <button class="profile-edit-icon" @click="startEditUserField('avatar')" data-tooltip="Edit photo">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
-                  <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
-                  <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
-                </svg>
-              </button>
-            </div>
-            <input v-if="editingUserField === 'avatar'" v-model="editingUserInput" class="form-control mb-2" style="max-width:320px;" placeholder="Paste image URL..." @keydown.enter="saveUserField" @blur="saveUserField" autofocus />
-            <div class="d-flex align-items-center gap-2 mb-1">
-              <template v-if="editingUserField === 'name'">
-                <input v-model="editingUserInput" class="chat-name-input" placeholder="Your name..." @keydown.enter="saveUserField" @blur="saveUserField" autofocus />
-              </template>
-              <template v-else>
-                <span class="fw-bold fs-5">{{ user.name }}</span>
-                <svg @click="startEditUserField('name')" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square chat-name-edit-icon" viewBox="0 0 16 16" style="cursor:pointer;flex-shrink:0">
-                  <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
-                  <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
-                </svg>
-              </template>
-            </div>
-            <div class="d-flex align-items-center gap-2 mb-2">
-              <template v-if="editingUserField === 'username'">
-                <input v-model="editingUserInput" class="chat-name-input" placeholder="@username..." @keydown.enter="saveUserField" @blur="saveUserField" autofocus />
-              </template>
-              <template v-else>
-                <span class="username-tag fs-6">Username: {{ user.username }}</span>
-                <svg @click="startEditUserField('username')" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-square chat-name-edit-icon" viewBox="0 0 16 16" style="cursor:pointer;flex-shrink:0">
-                  <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
-                  <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
-                </svg>
-              </template>
-            </div>
-            <div class="d-flex align-items-center gap-2 mb-2">
-              <template v-if="editingUserField === 'phone'">
-                <input v-model="editingUserInput" class="chat-name-input" placeholder="Phone number..." @keydown.enter="saveUserField" @blur="saveUserField" autofocus />
-              </template>
-              <template v-else>
-                <span class="contact-meta fs-6">Phone: {{ user.phone }}</span>
-                <svg @click="startEditUserField('phone')" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-square chat-name-edit-icon" viewBox="0 0 16 16" style="cursor:pointer;flex-shrink:0">
-                  <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
-                  <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
-                </svg>
-              </template>
-            </div>
-            <div class="d-flex align-items-center gap-2 mb-2">
-              <template v-if="editingUserField === 'email'">
-                <input v-model="editingUserInput" class="chat-name-input" placeholder="Email..." @keydown.enter="saveUserField" @blur="saveUserField" autofocus />
-              </template>
-              <template v-else>
-                <span class="contact-meta fs-6">Email: {{ user.email }}</span>
-                <svg @click="startEditUserField('email')" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-square chat-name-edit-icon" viewBox="0 0 16 16" style="cursor:pointer;flex-shrink:0">
-                  <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
-                  <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
-                </svg>
-              </template>
-            </div>
+          <div class="profile-avatar-wrap mb-3">
+            <AvatarImg :src="user.avatar" :size="80" :glow="true" />
+            <button class="profile-edit-icon" @click="$refs.avatarInput.click()" data-tooltip="Edit photo">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
+                <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
+              </svg>
+            </button>
+            <input type="file" ref="avatarInput" accept="image/*" style="display:none" @change="handleAvatarUpload" />
+          </div>
+            <EditableField
+              :value="user.name"
+              placeholder="Your name..."
+              tooltip="Edit name"
+              prefix="Name"
+              label-class="fw-bold fs-6"
+              @save="v => { user.name = v }"
+            />
+            <EditableField
+              :value="user.username"
+              placeholder="@username..."
+              tooltip="Edit username"
+              prefix="Username"
+              label-class="username-tag fs-6"
+              @save="v => { user.username = v }"
+            />
+            <EditableField
+              :value="user.phone"
+              placeholder="Phone number..."
+              tooltip="Edit phone"
+              prefix="Phone"
+              label-class="contact-meta fs-6"
+              @save="v => { user.phone = v }"
+            />
+            <EditableField
+              :value="user.email"
+              placeholder="Email..."
+              tooltip="Edit email"
+              prefix="Email"
+              label-class="contact-meta fs-6"
+              @save="v => { user.email = v }"
+            />
             <div class="d-flex align-items-center gap-2 mb-1">
               <span class="creation-date">Account creation date: {{ user.createdAt }}</span>
             </div>
@@ -464,12 +432,7 @@
           <div
             class="contact-info-view d-flex flex-column align-items-center justify-content-center p-5"
           >
-            <img
-              :src="contactInfoData.avatar"
-              class="rounded-circle mb-3"
-              width="80"
-              height="80"
-            />
+            <AvatarImg :src="contactInfoData.avatar" :size="80" class="mb-3" />
             <div class="fw-bold fs-5 mb-1 d-flex align-items-center gap-2">
               <template v-if="editingChatName">
                 <input
@@ -516,12 +479,7 @@
                 :key="i"
                 class="group-member-item"
               >
-                <img
-                  :src="member.avatar"
-                  class="rounded-circle avatar-border"
-                  width="36"
-                  height="36"
-                />
+                <AvatarImg :src="member.avatar" :size="36" />
                 <div class="group-member-info">
                   <div class="fw-semibold d-flex align-items-center gap-2">
                     <template v-if="editingMember === i">
@@ -537,6 +495,7 @@
                     <template v-else>
                       {{ member.name }}
                       <span v-if="member.isMe" style="font-size:10px;background:#ff0000;color:white;border-radius:8px;padding:1px 6px;font-weight:600;margin-left:2px;">You</span>
+                      <span v-if="member.isOwner" class="owner-tag">Group owner</span>
                       <svg
                         @click="startEditMember(i, member.name)"
                         xmlns="http://www.w3.org/2000/svg"
@@ -551,6 +510,13 @@
                         <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
                         <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
                       </svg>
+                      <button
+                        v-if="!member.isMe && contactInfoData.ownerId === user.username"
+                        class="kick-btn"
+                        @click="kickMember(contactInfoData, i)"
+                      >
+                        Kick
+                      </button>
                     </template>
                   </div>
                   <small class="contact-meta">{{ member.username }} · Last seen: {{ member.lastSeen }}</small>
@@ -569,7 +535,34 @@
                 {{ contactInfoData.phone }}
               </div>
             </template>
-
+            <div class="group-action-btns">
+              <button
+                v-if="contactInfoData.members?.length"
+                class="leave-group-btn"
+                @click="leaveGroup(contactInfoData)"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  class="bi bi-box-arrow-left"
+                  viewBox="0 0 16 16"
+                  style="margin-right: 6px; vertical-align: middle;"
+                >
+                  <path fill-rule="evenodd" d="M6 12.5a.5.5 0 0 0 .5.5h8a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-8a.5.5 0 0 0-.5.5v2a.5.5 0 0 1-1 0v-2A1.5 1.5 0 0 1 6.5 2h8A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 5 12.5v-2a.5.5 0 0 1 1 0z"/>
+                  <path fill-rule="evenodd" d="M.146 8.354a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L1.707 7.5H10.5a.5.5 0 0 1 0 1H1.707l2.147 2.146a.5.5 0 0 1-.708.708z"/>
+                </svg>
+                Leave Group
+              </button>
+              <button
+                v-if="contactInfoData.members?.length && contactInfoData.ownerId === user.username"
+                class="leave-group-btn"
+                @click="deleteGroup(contactInfoData)"
+              >
+                Delete Group
+              </button>
+            </div>
             <div class="shared-media w-100">
               <div class="fw-bold fs-5 mb-3">Shared Media</div>
 
@@ -607,12 +600,7 @@
               @mouseenter="hoveredChatName = true"
               @mouseleave="hoveredChatName = false"
             >
-              <img
-                :src="selectedChat.avatar"
-                class="rounded-circle me-2 avatar-border"
-                width="40"
-                height="40"
-              />
+              <AvatarImg :src="selectedChat.avatar" :size="40" :margin="2" />
               <div
                 class="fw-bold d-flex align-items-center gap-2 chat-name-wrapper"
               >
@@ -1069,10 +1057,8 @@
         </button>
       </div>
     </div>
-    <div v-if="showLogoutMessage" class="logout-toast">Logging out...</div>
-    <div v-if="showMediaLimitToast" class="media-limit-toast">
-      Cannot upload more than 10 media at once :(
-    </div>
+    <ToastMessage message="Logging out..." v-model="showLogoutMessage" :duration="2000" />
+    <ToastMessage message="Cannot upload more than 10 media at once :(" v-model="showMediaLimitToast" :duration="3000" />
     <HeaderMenu
       :visible="headerMenu.visible"
       :class="{ measuring: headerMenu.measuring }"
@@ -1115,10 +1101,16 @@
 <script>
 import HeaderMenu from "../components/HeaderMenu.vue";
 import EmojiPicker from "../components/EmojiPicker.vue";
+import AvatarImg from "../components/AvatarImg.vue";
+import EditableField from "../components/EditableField.vue";
+import ToastMessage from "../components/ToastMessage.vue";
 export default {
   components: {
-    HeaderMenu,
-    EmojiPicker,
+  HeaderMenu,
+  EmojiPicker,
+  AvatarImg,
+  EditableField,
+  ToastMessage,
   },
   mounted() {
     document.addEventListener("click", this.handleClickOutside);
@@ -1181,8 +1173,6 @@ export default {
         createdAt: "April 28, 2026",
       },
       viewingOwnProfile: false,
-      editingUserField: null,
-      editingUserInput: "",
       messageMenu: {
         visible: false,
         x: 0,
@@ -1251,7 +1241,13 @@ export default {
         },
         {
           label: "⛔ Block",
-          action: () => this.blockUser(this.selectedChatForMenu),
+          action: () => {
+            if (this.selectedChatForMenu?.members?.length) {
+              this.leaveGroup(this.selectedChatForMenu);
+            } else {
+              this.blockUser(this.selectedChatForMenu);
+            }
+          },
         },
         {
           label: "🧹 Delete Chat",
@@ -1276,6 +1272,7 @@ export default {
           muted: false,
           hidden: false,
           blocked: false,
+          lastSeen: "Recently",
           messages: [
             { sender: "other", text: "Hello!" },
             { sender: "me", text: "Hi there!" },
@@ -1294,6 +1291,7 @@ export default {
           muted: false,
           hidden: false,
           blocked: false,
+          lastSeen: "Recently",
           messages: [
             { sender: "other", text: "Ejla men!" },
             { sender: "me", text: "Ojla" },
@@ -1312,6 +1310,7 @@ export default {
           muted: false,
           hidden: false,
           blocked: false,
+          lastSeen: "Recently",
           messages: [
             { sender: "other", text: "Sup!" },
             { sender: "me", text: "Hi there!" },
@@ -1355,6 +1354,37 @@ export default {
     },
   },
   methods: {
+    kickMember(groupChat, memberIndex) {
+      if (!groupChat?.members) return;
+      groupChat.members.splice(memberIndex, 1);
+      if (!groupChat.hasCustomName) {
+        groupChat.name = groupChat.members.map(m => m.name).join(", ");
+      }
+    },
+    deleteGroup(chat) {
+      if (!chat) return;
+      const index = this.chats.indexOf(chat);
+      if (index !== -1) this.chats.splice(index, 1);
+      if (this.selectedChat?.id === chat.id) this.selectedChat = null;
+      this.viewingContactInfo = false;
+      this.contactInfoData = null;
+      this.closeHeaderMenu();
+    },
+    leaveGroup(chat) {
+      if (!chat) return;
+      const index = this.chats.indexOf(chat);
+      if (index !== -1) this.chats.splice(index, 1);
+      if (this.selectedChat?.id === chat.id) this.selectedChat = null;
+      this.viewingContactInfo = false;
+      this.contactInfoData = null;
+      this.closeHeaderMenu();
+    },
+    handleAvatarUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      this.user.avatar = URL.createObjectURL(file);
+      event.target.value = "";
+    },
     startEditMember(index, currentName) {
       this.editingMember = index;
       this.editingMemberInput = currentName;
@@ -1373,7 +1403,7 @@ export default {
       this.editingMember = null;
       this.editingMemberInput = "";
     },
-    // Drag and drop u chat
+    // Drag and drop fileova u chat
     handleDrop(event) {
       if (!this.selectedChat) return;
       const files = Array.from(event.dataTransfer.files);
@@ -1391,7 +1421,7 @@ export default {
       }
       this.$nextTick(() => this.$refs.messageInput?.focus());
     },
-    handleSpecialAction() {
+    openSettings() {
       if (this.viewingSettings) return;
       
       this.viewingContactInfo = false;
@@ -1405,19 +1435,6 @@ export default {
     sendInvite() {
       this.newContactSearch = "";
       this.showInviteSent = true;
-    },
-    // Edit ikona
-    startEditUserField(field) {
-      this.editingUserField = field;
-      this.editingUserInput = field === 'avatar' ? this.user.avatar : this.user[field];
-    },
-    saveUserField() {
-      const trimmed = this.editingUserInput.trim();
-      if (trimmed && this.editingUserField) {
-        this.user[this.editingUserField] = trimmed;
-      }
-      this.editingUserField = null;
-      this.editingUserInput = "";
     },
     clampMenuPosition(x, y) {
       const menuWidth = 220;
@@ -1473,21 +1490,9 @@ export default {
           username: this.user.username,
           lastSeen: "Online",
           isMe: true,
+          isOwner: true,
         },
-        {
-          name: memberObjects[0]?.name,
-          avatar: memberObjects[0]?.avatar,
-          username: memberObjects[0]?.username,
-          lastSeen: memberObjects[0]?.lastSeen,
-          isMe: memberObjects[0]?.isMe,
-        },
-        {
-          name: memberObjects[1]?.name,
-          avatar: memberObjects[1]?.avatar,
-          username: memberObjects[1]?.username,
-          lastSeen: memberObjects[1]?.lastSeen,
-          isMe: memberObjects[1]?.isMe,
-        },
+        ...memberObjects,
       ].filter(m => m.name);
 
       const name = allMembers.map((m) => m.name).join(", ");
@@ -1496,6 +1501,7 @@ export default {
         id: Date.now(),
         name,
         hasCustomName: false,
+        ownerId: this.user.username,
         avatar: this.selectedGroupMembers[0].avatar,
         lastMessage: "",
         phone: "",
@@ -1577,7 +1583,7 @@ export default {
 
       this.searchResults = this.selectedChat.messages
         .map((msg, index) => ({ ...msg, index }))
-        .filter((msg) => msg.text.toLowerCase().includes(query));
+        .filter((msg) => msg.text?.toLowerCase().includes(query));
 
       this.currentSearchIndex = 0;
 
@@ -1634,6 +1640,8 @@ export default {
       this.selectedChat = chat;
       this.selectedChatForMenu = chat;
       this.globalSearch = "";
+      this.editingChatName = false;
+      this.showNewChatMenu = false;
       this.viewingContactInfo = false;
       this.contactInfoData = null;
       this.viewingOwnProfile = false;
@@ -1666,7 +1674,9 @@ export default {
       const pinItem = this.headerMenuItems.find((i) => i.action.toString().includes("pinChat"));
       const muteItem = this.headerMenuItems.find((i) => i.action.toString().includes("muteChat"));
       const blockItem = this.headerMenuItems.find((i) => i.action.toString().includes("blockUser"));
-      if (blockItem) blockItem.label = chat.blocked ? "🔓 Unblock" : "⛔ Block";
+      if (blockItem) blockItem.label = this.selectedChatForMenu.members?.length 
+        ? "🚪 Leave Group" 
+        : this.selectedChatForMenu.blocked ? "🔓 Unblock" : "⛔ Block";
       if (muteItem) muteItem.label = chat.muted ? "🔔 Unmute Notifications" : "🔕 Mute Notifications";
       if (pinItem) pinItem.label = chat.pinned ? "📍 Unpin Conversation" : "📌 Pin Conversation";
 
@@ -1684,6 +1694,7 @@ export default {
         this.headerMenu.y = pos.y;
       });
     },
+    //Chat options
     toggleHeaderMenu(event) {
       this.selectedChatForMenu = this.selectedChat;
       event.stopPropagation();
@@ -1705,7 +1716,9 @@ export default {
       const muteItem = this.headerMenuItems.find((i) => i.action.toString().includes("muteChat"));
       if (this.selectedChatForMenu) {
         if (pinItem) pinItem.label = this.selectedChatForMenu.pinned ? "📍 Unpin Conversation" : "📌 Pin Conversation";
-        if (blockItem) blockItem.label = this.selectedChatForMenu.blocked ? "🔓 Unblock" : "⛔ Block";
+      if (blockItem) blockItem.label = this.selectedChatForMenu.members?.length 
+        ? "🚪 Leave Group" 
+        : this.selectedChatForMenu.blocked ? "🔓 Unblock" : "⛔ Block";
         if (muteItem) muteItem.label = this.selectedChatForMenu.muted ? "🔔 Unmute Notifications" : "🔕 Mute Notifications";
       }
       this.headerMenu.visible = true;
@@ -2516,72 +2529,6 @@ export default {
   color: white;
 }
 
-.dark .header-menu {
-  background: #1e1e1e;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.dark .header-menu button {
-  color: white;
-}
-
-.dark .header-menu button:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.dropdown-enter-active,
-.dropdown-leave-active {
-  transition: all 0.15s ease;
-}
-
-.dropdown-enter-from {
-  opacity: 0;
-  transform: translateY(-6px) scale(0.95);
-}
-
-.dropdown-enter-to {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-
-.dropdown-leave-from {
-  opacity: 1;
-}
-
-.dropdown-leave-to {
-  opacity: 0;
-  transform: translateY(-6px) scale(0.95);
-}
-
-.header-menu {
-  position: fixed;
-  background: white;
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  border-radius: 10px;
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  z-index: 10000;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
-  min-width: 220px;
-}
-
-.header-menu button {
-  background: none;
-  border: none;
-  padding: 12px 14px;
-  text-align: left;
-  cursor: pointer;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.header-menu button:hover {
-  background: rgba(0, 0, 0, 0.08);
-}
-
 .contact-menu-btn {
   background: none;
   border: none;
@@ -2611,50 +2558,6 @@ export default {
 
 .dark .contact-menu-btn {
   color: white;
-}
-
-.logout-toast {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-
-  background: rgba(255, 0, 0, 0.9);
-  color: #fff;
-
-  padding: 16px 28px;
-  border-radius: 10px;
-
-  font-weight: 600;
-  font-size: 1.1rem;
-  letter-spacing: 0.5px;
-
-  box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
-
-  z-index: 9999;
-
-  animation: fadeInOut 1s ease forwards;
-}
-
-@keyframes fadeInOut {
-  0% {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-
-  20% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  80% {
-    opacity: 1;
-  }
-
-  100% {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
 }
 
 .pinned-icon svg {
@@ -3331,22 +3234,6 @@ export default {
   gap: 10px;
   align-items: center;
 }
-.media-limit-toast {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(255, 0, 0, 0.9);
-  color: #fff;
-  padding: 16px 28px;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 1.1rem;
-  letter-spacing: 0.5px;
-  box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
-  z-index: 9999;
-  animation: fadeInOut 3s ease forwards;
-}
 .media-clear-btn {
   background: none;
   border: none;
@@ -3537,10 +3424,6 @@ export default {
   display: flex;
   flex-direction: column;
   min-width: 0;
-}
-.header-menu.measuring {
-  opacity: 0;
-  pointer-events: none;
 }
 .username-tag {
   color: #ff0000;
@@ -3905,5 +3788,58 @@ export default {
 }
 .chat-name-edit-icon:hover::after {
   opacity: 1;
+}
+.leave-group-btn {
+  background: none;
+  border: 2px solid #ff0000;
+  color: #ff0000;
+  border-radius: 8px;
+  padding: 8px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 24px;
+  transition: background 0.7s ease, color 0.7s ease, border-color 0.7s ease;
+}
+
+.leave-group-btn:hover {
+  background: rgba(255, 50, 50, 0.384);
+  color: inherit;
+  border-color: transparent;
+}
+.owner-tag {
+  font-size: 10px;
+  color: gray;
+  font-weight: 500;
+  margin-left: 4px;
+  flex-shrink: 0;
+}
+
+.kick-btn {
+  background: none;
+  border: 1px solid rgba(255, 0, 0, 0.4);
+  color: #ff0000;
+  border-radius: 6px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.kick-btn:hover {
+  background: #ff0000;
+  color: white;
+}
+.group-action-btns {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.group-action-btns .leave-group-btn {
+  margin-bottom: 0;
 }
 </style>
