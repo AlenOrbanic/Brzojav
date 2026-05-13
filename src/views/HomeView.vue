@@ -332,13 +332,14 @@
               </div>
             </div>
             <div class="settings-row settings-row-column">
-              <div class="d-flex align-items-center justify-content-between w-100">
+              <div class="d-flex align-items-center justify-content-between w-100 settings-row-header">
                 <span class="settings-label">Blocked accounts</span>
-                <button class="settings-expand-btn" @click="showBlockedAccounts = !showBlockedAccounts">
-                  {{ showBlockedAccounts ? '▲' : '▼' }}
-                </button>
+                <span class="settings-show-link" @click="showBlockedAccounts = !showBlockedAccounts">
+                  {{ showBlockedAccounts ? 'Hide List' : 'Show List' }}
+                </span>
               </div>
-              <div v-if="showBlockedAccounts" class="blocked-list">
+              <div class="blocked-list-wrapper" :class="{ open: showBlockedAccounts }">
+              <div class="blocked-list">
                 <div v-if="chats.filter(c => c.blocked).length === 0" class="blocked-empty">
                   No blocked accounts
                 </div>
@@ -354,6 +355,34 @@
                   </div>
                   <button class="unblock-btn" @click="chat.blocked = false">Unblock</button>
                 </div>
+              </div>
+              </div>
+            </div>
+            <div class="settings-row settings-row-column">
+              <div class="d-flex align-items-center justify-content-between w-100 settings-row-header">
+                <span class="settings-label">Change password</span>
+                <button class="settings-change-btn" @click="showChangePassword = !showChangePassword">
+                  Change
+                </button>
+              </div>
+              <div class="change-password-wrapper" :class="{ open: showChangePassword }">
+              <div class="change-password-row">
+                <input
+                  v-model="oldPassword"
+                  type="password"
+                  class="form-control password-input"
+                  placeholder="Old password"
+                />
+                <input
+                  v-model="newPassword"
+                  type="password"
+                  class="form-control password-input"
+                  placeholder="New password"
+                />
+                <button class="settings-toggle-btn active" @click="changePassword">
+                  Change
+                </button>
+              </div>
               </div>
             </div>
             <div class="settings-row">
@@ -1139,6 +1168,9 @@ export default {
   },
   data() {
     return {
+      showChangePassword: false,
+      oldPassword: "",
+      newPassword: "",
       editingMember: null,
       editingMemberInput: "",
       viewingSettings: false,
@@ -1371,6 +1403,11 @@ export default {
     },
   },
   methods: {
+    changePassword() {
+      this.oldPassword = "";
+      this.newPassword = "";
+      this.showChangePassword = false;
+    },
     handleGroupAvatarUpload(event) {
       const file = event.target.files[0];
       if (!file || !this.contactInfoData) return;
@@ -2268,11 +2305,6 @@ export default {
   font-size: 2.5rem;
 }
 
-.avatar-border {
-  border: 2px solid #ff0000;
-  box-shadow: 0 0 6px rgba(255, 0, 0, 0.4);
-}
-
 .send-btn {
   background-color: #ff0000;
   color: white;
@@ -2979,10 +3011,6 @@ export default {
   color: white;
 }
 
-.reaction-chip-mine {
-  cursor: pointer;
-}
-
 .light .reaction-chip-mine:hover {
   background: rgba(255, 0, 0, 0.1);
 }
@@ -3514,9 +3542,21 @@ export default {
   border-bottom: 1px solid rgba(255, 0, 0, 0.15);
   gap: 12px;
 }
+
 .settings-row-column {
   flex-direction: column;
   align-items: flex-start;
+  padding: 0;
+  border-bottom: 1px solid rgba(255, 0, 0, 0.15);
+}
+
+.settings-row-header {
+  padding: 10px 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .settings-label {
@@ -3554,18 +3594,8 @@ export default {
   color: white;
 }
 
-.settings-expand-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  color: #ff0000;
-  padding: 2px 6px;
-}
-
 .blocked-list {
   width: 100%;
-  margin-top: 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -3865,4 +3895,76 @@ export default {
 .group-action-btns .leave-group-btn {
   margin-bottom: 0;
 }
+.change-password-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+
+.password-input {
+  flex: 1;
+  min-width: 120px;
+}
+.settings-show-link {
+  color: #ff0000;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  white-space: nowrap;
+  transition: opacity 0.2s ease;
+}
+
+.settings-show-link:hover {
+  opacity: 0.7;
+}
+
+.settings-change-btn {
+  padding: 5px 16px;
+  border-radius: 20px;
+  border: 2px solid #ff0000;
+  background: #ff0000;
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.2s ease, transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.settings-change-btn:hover {
+  background: #cc0000;
+  border-color: #cc0000;
+  transform: scale(1.05);
+}
+
+.blocked-list-wrapper,
+.change-password-wrapper {
+  width: 100%;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s ease;
+  overflow: hidden;
+}
+
+.blocked-list-wrapper.open,
+.change-password-wrapper.open {
+  grid-template-rows: 1fr;
+}
+
+.blocked-list-wrapper > .blocked-list,
+.change-password-wrapper > .change-password-row {
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.blocked-list-wrapper.open > .blocked-list,
+.change-password-wrapper.open > .change-password-row {
+  padding: 0 0 10px 0;
+}
+
 </style>
