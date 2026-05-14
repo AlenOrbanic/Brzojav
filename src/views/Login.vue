@@ -33,48 +33,49 @@
                 <div class="register-grid">
                   <div class="input-field">
                     <label>Username</label>
-                    <input type="text" required class="form-control" />
+                    <input v-model="username" type="text" required class="form-control" />
                   </div>
 
                   <div class="input-field">
                     <label>Email</label>
-                    <input type="text" required class="form-control" />
+                    <input v-model="email" type="text" required class="form-control" />
                   </div>
 
                   <div class="input-field">
                     <label>Password</label>
-                    <input type="password" required class="form-control" />
+                    <input v-model="registerPassword" type="password" required class="form-control" />
                   </div>
 
                   <div class="input-field">
                     <label>Phone Number</label>
-                    <input type="text" required class="form-control" />
+                    <input v-model="phone" type="text" class="form-control" />
                   </div>
                 </div>
               </template>
               <template v-else>
                 <div class="input-field full-width">
-                  <label>Email</label>
-                  <input type="text" required class="form-control" />
+                  <label>Email or Username</label>
+                  <input v-model="identifier" type="text" required class="form-control" />
                 </div>
 
                 <div class="input-field full-width">
                   <label>Password</label>
-                  <input type="password" required class="form-control" />
+                  <input v-model="password" type="password" required class="form-control" />
                 </div>
               </template>
+              <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
               <div class="forget">
                 <label>
-                  <input type="checkbox" />
+                  <input type="checkbox" v-model="rememberMe" />
                   <span> Remember me</span>
                 </label>
                 <a href="#" @click.prevent="openForgotPassword">Forgot password?</a>
               </div>
-
               <div class="button-wrapper">
-                <button type="submit">{{ isRegister ? "Register" : "Log In" }}</button>
+                <button type="submit" :disabled="loading">
+                  {{ loading ? "Please wait..." : isRegister ? "Register" : "Log In" }}
+                </button>
               </div>
-
               <div class="register">
                 <span>{{ isRegister ? "Already have an account? " : "Don't have an account? " }}</span>
                 <a href="#" @click.prevent="toggleRegister">
@@ -91,26 +92,114 @@
 
 <script setup>
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 
+const router = useRouter();
 const isRegister = ref(false);
 const isForgotPassword = ref(false);
+
+const identifier = ref(""); // email or username
+const password = ref("");
+const phone = ref("");
+const username = ref("");
+const email = ref("");
+const registerPassword = ref("");
+const rememberMe = ref(false);
+const errorMessage = ref("");
+const loading = ref(false);
 
 function toggleRegister() {
   isRegister.value = !isRegister.value;
   isForgotPassword.value = false;
+  errorMessage.value = "";
 }
 
 function openForgotPassword() {
   isForgotPassword.value = true;
   isRegister.value = false;
+  errorMessage.value = "";
 }
 
-function handleSubmit() {
-  if (isForgotPassword.value) {
-    alert("Forgot password submitted!");
-  } else {
-    alert(isRegister.value ? "Register submitted!" : "Login submitted!");
+async function handleSubmit() {
+  errorMessage.value = "";
+  loading.value = true;
+
+  try {
+    if (isForgotPassword.value) {
+      // implement forgot password
+      alert("Forgot password submitted!");
+      return;
+    }
+
+    if (isRegister.value) {
+      await handleRegister();
+    } else {
+      await handleLogin();
+    }
+  } finally {
+    loading.value = false;
   }
+}
+
+async function handleRegister() {
+  if (!username.value || !email.value || !registerPassword.value) {
+    errorMessage.value = "Username, email and password are required";
+    return;
+  }
+
+  const res = await fetch("http://localhost:3001/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      username: username.value,
+      email:    email.value,
+      password: registerPassword.value,
+      phone:    phone.value,
+    }),
+  });
+
+  const data = await res.json();
+
+  if (!data.ok) {
+    errorMessage.value = data.error;
+    return;
+  }
+
+  saveSession(data.token, data.user);
+  router.replace("/");
+}
+
+async function handleLogin() {
+  if (!identifier.value || !password.value) {
+    errorMessage.value = "All fields are required";
+    return;
+  }
+
+  const res = await fetch("http://localhost:3001/api/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      identifier: identifier.value,
+      password:   password.value,
+    }),
+  });
+
+  const data = await res.json();
+
+  if (!data.ok) {
+    errorMessage.value = data.error;
+    return;
+  }
+
+  saveSession(data.token, data.user);
+  router.replace("/");
+}
+
+function saveSession(token, user) {
+  // rememberMe u localStorage
+  const storage = rememberMe.value ? localStorage : sessionStorage;
+  storage.setItem("token", token);
+  storage.setItem("user", JSON.stringify(user));
 }
 </script>
 
@@ -302,5 +391,14 @@ a:hover {
 .fade-slide-leave-to {
   opacity: 0;
   transform: translateY(-20px);
+}
+.error-message {
+  color: #fff;
+  background: rgba(255, 0, 0, 0.4);
+  border: 1px solid #ff0000;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  text-align: center;
 }
 </style>
