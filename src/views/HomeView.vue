@@ -830,7 +830,7 @@
               </span>
               <div
                 v-if="msg.sender !== 'system'"
-                class="message-wrapper w-100 d-flex"
+                class="message-wrapper w-100 d-flex align-items-end"
                 :class="
                   msg.sender === 'me'
                     ? 'justify-content-end'
@@ -839,6 +839,19 @@
                 @mouseenter="hoveredMessage = index"
                 @mouseleave="hoveredMessage = null"
               >
+              <AvatarImg
+                v-if="msg.sender !== 'me'"
+                :src="selectedChat.members
+                  ? (selectedChat.members.find(m => !m.isMe)?.avatar || selectedChat.avatar)
+                  : selectedChat.avatar"
+                :size="28"
+                :margin="2"
+                style="flex-shrink: 0; margin-bottom: 2px;"
+                :data-tooltip="(selectedChat.members
+                  ? (selectedChat.members.find(m => !m.isMe)?.name || selectedChat.name)
+                  : selectedChat.name) + (msg.time ? ' · ' + formatTime(msg.time) : '')"
+                class="msg-avatar"
+              />
                 <div
                   v-if="hoveredMessage === index && msg.sender === 'me'"
                   class="message-actions"
@@ -1101,6 +1114,7 @@
         <button @click="copyMessage">Copy text</button>
         <button @click="reactMessage">React</button>
         <button @click="pinMessage">Pin message</button>
+        <button @click="openMessageInfo">Info</button>
         <button
           @click="deleteMessage"
           v-if="messageMenu.message?.sender === 'me'"
@@ -1148,6 +1162,16 @@
       @select="pickEmoji"
       @close="emojiPicker.visible = false"
     />
+    <div v-if="messageInfo.visible" class="msg-info-overlay" @click.self="messageInfo.visible = false">
+    <div class="msg-info-box">
+      <div class="msg-info-title">Message Info</div>
+      <div class="msg-info-row">
+        <span class="msg-info-label">✅ Delivered</span>
+        <span class="msg-info-value">{{ messageInfo.time }}</span>
+      </div>
+      <button class="msg-info-close" @click="messageInfo.visible = false">Close</button>
+    </div>
+  </div>
   </div>
 </template>
 
@@ -1175,6 +1199,10 @@ export default {
   },
   data() {
     return {
+      messageInfo: {
+        visible: false,
+        time: "",
+      },
       showChangePassword: false,
       oldPassword: "",
       newPassword: "",
@@ -1410,6 +1438,22 @@ export default {
     },
   },
   methods: {
+    openMessageInfo() {
+      if (!this.messageMenu.message) return;
+      this.messageInfo.time = this.formatTime(this.messageMenu.message.time) || "Unknown";
+      this.messageInfo.visible = true;
+      this.closeMessageMenu();
+    },
+    formatTime(date) {
+      if (!date) return "";
+      const d = new Date(date);
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const year = d.getFullYear();
+      const hours = String(d.getHours()).padStart(2, "0");
+      const mins = String(d.getMinutes()).padStart(2, "0");
+      return `${day}.${month}.${year}. at ${hours}:${mins}`;
+    },
     changePassword() {
       this.oldPassword = "";
       this.newPassword = "";
@@ -1934,6 +1978,7 @@ export default {
         text: text,
         media: this.pendingMedia.length ? [...this.pendingMedia] : null,
         replyTo: this.replyingTo || null,
+        time: new Date(),
       });
 
       this.selectedChat.lastMessage = this.pendingMedia.length
@@ -4001,5 +4046,103 @@ export default {
 
 .dark .system-message {
   background: rgba(255, 255, 255, 0.08);
+}
+.message-wrapper {
+  gap: 6px;
+}
+.msg-avatar {
+  position: relative;
+  cursor: default;
+}
+
+.msg-avatar::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 130%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: black;
+  color: white;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 999;
+}
+
+.msg-avatar:hover::after {
+  opacity: 1;
+}
+.msg-info-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+}
+
+.msg-info-box {
+  border-radius: 12px;
+  padding: 24px 28px;
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+}
+
+.light .msg-info-box {
+  background: white;
+  color: black;
+}
+
+.dark .msg-info-box {
+  background: #1e1e1e;
+  color: white;
+}
+
+.msg-info-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ff0000;
+}
+
+.msg-info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.msg-info-label {
+  font-weight: 600;
+}
+
+.msg-info-value {
+  opacity: 0.75;
+  font-size: 13px;
+}
+
+.msg-info-close {
+  align-self: flex-end;
+  background: none;
+  border: 2px solid #ff0000;
+  color: #ff0000;
+  border-radius: 8px;
+  padding: 5px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.msg-info-close:hover {
+  background: #ff0000;
+  color: white;
 }
 </style>
