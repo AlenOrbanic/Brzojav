@@ -816,13 +816,20 @@
             @dragover.prevent
             @drop.prevent="handleDrop"
           >
-            <div
-              v-for="(msg, index) in selectedChat?.messages || []"
-              :key="index"
-              class="mb-2"
-              :class="msg.sender === 'me' ? 'text-end' : 'text-start'"
-            >
+          <div
+            v-for="(msg, index) in selectedChat?.messages || []"
+            :key="index"
+            class="mb-2"
+            :class="msg.sender === 'system' ? 'text-center w-100' : (msg.sender === 'me' ? 'text-end' : 'text-start')"
+          >
+              <span
+                v-if="msg.sender === 'system'"
+                class="system-message"
+              >
+              {{ msg.text }}
+              </span>
               <div
+                v-if="msg.sender !== 'system'"
                 class="message-wrapper w-100 d-flex"
                 :class="
                   msg.sender === 'me'
@@ -923,7 +930,7 @@
                     </div>
                   </div>
                   <span
-                    v-if="msg.text"
+                    v-else-if="msg.text"
                     class="d-inline-block p-2 rounded message"
                     :class="[
                       msg.sender === 'me' ? 'sent' : 'received',
@@ -1416,10 +1423,16 @@ export default {
     },
     kickMember(groupChat, memberIndex) {
       if (!groupChat?.members) return;
+      const kicked = groupChat.members[memberIndex];
       groupChat.members.splice(memberIndex, 1);
       if (!groupChat.hasCustomName) {
         groupChat.name = groupChat.members.map(m => m.name).join(", ");
       }
+      groupChat.messages.push({
+        sender: "system",
+        text: `${this.user.name} kicked ${kicked.name} from the group.`,
+      });
+      groupChat.lastMessage = `${this.user.name} kicked ${kicked.name}`;
     },
     deleteGroup(chat) {
       if (!chat) return;
@@ -1858,6 +1871,11 @@ export default {
     },
     logout() {
       this.showLogoutMessage = true;
+
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("user");
 
       setTimeout(() => {
         this.showLogoutMessage = false;
@@ -3966,5 +3984,22 @@ export default {
 .change-password-wrapper.open > .change-password-row {
   padding: 0 0 10px 0;
 }
+.system-message {
+  display: inline-block;
+  text-align: center;
+  color: gray;
+  font-size: 12px;
+  font-style: italic;
+  padding: 3px 12px;
+  border-radius: 12px;
+  margin: 2px auto;
+}
 
+.light .system-message {
+  background: rgba(0, 0, 0, 0.07);
+}
+
+.dark .system-message {
+  background: rgba(255, 255, 255, 0.08);
+}
 </style>
