@@ -3,7 +3,10 @@
     <video class="bg-video" autoplay muted loop playsinline>
       <source src="../assets/framebg.mp4" type="video/mp4" />
     </video>
-
+    <div style="display:none" aria-hidden="true">
+      <input type="text" name="username" tabindex="-1" />
+      <input type="password" name="password" tabindex="-1" />
+    </div>
     <!-- Topbar -->
 
     <div class="app-topbar border-bottom px-3 py-2 d-flex align-items-center">
@@ -38,12 +41,14 @@
           </svg>
         </button>
       </div>
-
       <input
         v-model="globalSearch"
         type="text"
         class="form-control search-input"
         placeholder="Search conversations..."
+        autocomplete="off"
+        readonly
+        @focus="($event.target.removeAttribute('readonly'))"
       />
     </div>
     <div class="app-body">
@@ -284,6 +289,7 @@
         <!-- Settings -->
 
         <div v-if="viewingSettings" class="contact-info-wrapper">
+          <button class="back-btn" @click="viewingSettings = false">← Back</button>
           <div class="settings-view">
             <div class="settings-title">Settings</div>
             <div class="settings-row">
@@ -367,18 +373,20 @@
               </div>
               <div class="change-password-wrapper" :class="{ open: showChangePassword }">
               <div class="change-password-row">
-                <input
-                  v-model="oldPassword"
-                  type="password"
-                  class="form-control password-input"
-                  placeholder="Old password"
-                />
-                <input
-                  v-model="newPassword"
-                  type="password"
-                  class="form-control password-input"
-                  placeholder="New password"
-                />
+              <input
+                v-model="oldPassword"
+                type="password"
+                class="form-control password-input"
+                placeholder="Old password"
+                autocomplete="current-password"
+              />
+              <input
+                v-model="newPassword"
+                type="password"
+                class="form-control password-input"
+                placeholder="New password"
+                autocomplete="new-password"
+              />
                 <button class="settings-toggle-btn active" @click="changePassword">
                   Change
                 </button>
@@ -1540,7 +1548,7 @@ export default {
     },
     openSettings() {
       if (this.viewingSettings) return;
-      
+      this.globalSearch = "";
       this.viewingContactInfo = false;
       this.contactInfoData = null;
       this.viewingOwnProfile = false;

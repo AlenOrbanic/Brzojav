@@ -93,6 +93,7 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import api from '@/api';
 
 const router = useRouter();
 const isRegister = ref(false);
@@ -146,27 +147,13 @@ async function handleRegister() {
     errorMessage.value = "Username, email and password are required";
     return;
   }
-
-  const res = await fetch("http://localhost:3001/api/auth/register", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      username: username.value,
-      email:    email.value,
-      password: registerPassword.value,
-      phone:    phone.value,
-    }),
-  });
-
-  const data = await res.json();
-
-  if (!data.ok) {
-    errorMessage.value = data.error;
-    return;
+  try {
+    const data = await api.auth.register(username.value, email.value, registerPassword.value, phone.value);
+    saveSession(data.token, data.user);
+    router.replace("/");
+  } catch (err) {
+    errorMessage.value = err.message;
   }
-
-  saveSession(data.token, data.user);
-  router.replace("/");
 }
 
 async function handleLogin() {
@@ -174,25 +161,13 @@ async function handleLogin() {
     errorMessage.value = "All fields are required";
     return;
   }
-
-  const res = await fetch("http://localhost:3001/api/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      identifier: identifier.value,
-      password:   password.value,
-    }),
-  });
-
-  const data = await res.json();
-
-  if (!data.ok) {
-    errorMessage.value = data.error;
-    return;
+  try {
+    const data = await api.auth.login(identifier.value, password.value);
+    saveSession(data.token, data.user);
+    router.replace("/");
+  } catch (err) {
+    errorMessage.value = err.message;
   }
-
-  saveSession(data.token, data.user);
-  router.replace("/");
 }
 
 function saveSession(token, user) {
