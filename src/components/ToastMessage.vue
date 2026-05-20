@@ -1,6 +1,6 @@
 <template>
   <transition name="toast">
-    <div v-if="visible" class="toast-message">
+    <div v-if="visible" class="toast-message" :style="{ '--duration': duration + 'ms' }">
       {{ message }}
     </div>
   </transition>
@@ -51,7 +51,7 @@ export default {
   box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
   z-index: 9999;
   pointer-events: none;
-  animation: fadeInOut 1s ease forwards;
+  animation: fadeInOut var(--duration) ease forwards;
 }
 
 @keyframes fadeInOut {

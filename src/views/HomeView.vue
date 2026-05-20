@@ -114,14 +114,15 @@
                   type="text"
                   class="form-control"
                   placeholder="Search @username"
-                  @focus="showInviteSent = false"
+                  @focus="showInviteSent = false; inviteError = ''"
                 />
-                <div v-if="showInviteSent" class="invite-sent-text">Invite sent!</div>
+                <div v-if="inviteError" class="invite-error-text">{{ inviteError }}</div>
+                <div v-if="showInviteSent" class="invite-sent-text">User added to chats!</div>
                 <button
                   class="btn theme-action-btn send-invite-btn action-btn-hover"
                   @click="sendInvite"
                 >
-                  Send invite
+                  Add to chat
                 </button>
               </div>
             </template>
@@ -423,40 +424,40 @@
             </button>
             <input type="file" ref="avatarInput" accept="image/*" style="display:none" @change="handleAvatarUpload" />
           </div>
-            <EditableField
-              :value="user.name"
-              placeholder="Your name..."
-              tooltip="Edit name"
-              prefix="Name"
-              label-class="fw-bold fs-6"
-              @save="v => { user.name = v }"
-            />
-            <EditableField
-              :value="user.username"
-              placeholder="@username..."
-              tooltip="Edit username"
-              prefix="Username"
-              label-class="username-tag fs-6"
-              @save="v => { user.username = v }"
-            />
-            <EditableField
-              :value="user.phone"
-              placeholder="Phone number..."
-              tooltip="Edit phone"
-              prefix="Phone"
-              label-class="contact-meta fs-6"
-              @save="v => { user.phone = v }"
-            />
-            <EditableField
-              :value="user.email"
-              placeholder="Email..."
-              tooltip="Edit email"
-              prefix="Email"
-              label-class="contact-meta fs-6"
-              @save="v => { user.email = v }"
-            />
+          <EditableField
+            :value="user.name"
+            placeholder="Your name..."
+            tooltip="Edit name"
+            prefix="Name"
+            label-class="fw-bold fs-6"
+            @save="v => updateProfile('name', v)"
+          />
+          <EditableField
+            :value="user.username"
+            placeholder="@username..."
+            tooltip="Edit username"
+            prefix="Username"
+            label-class="username-tag fs-6"
+            @save="v => updateProfile('username', v)"
+          />
+          <EditableField
+            :value="user.phone"
+            placeholder="Phone number..."
+            tooltip="Edit phone"
+            prefix="Phone"
+            label-class="contact-meta fs-6"
+            @save="v => updateProfile('phone', v)"
+          />
+          <EditableField
+            :value="user.email"
+            placeholder="Email..."
+            tooltip="Edit email"
+            prefix="Email"
+            label-class="contact-meta fs-6"
+            @save="v => updateProfile('email', v)"
+          />
             <div class="d-flex align-items-center gap-2 mb-1">
-              <span class="creation-date">Account creation date: {{ user.createdAt }}</span>
+              <span class="creation-date">Account creation date: {{ new Date(user.createdAt).toLocaleDateString('hr-HR').replaceAll(' ', '') }}</span>
             </div>
 
           </div>
@@ -471,7 +472,7 @@
           >
             <div class="profile-avatar-wrap mb-3">
               <AvatarImg :src="contactInfoData.avatar" :size="80" :glow="true" />
-              <template v-if="contactInfoData.members?.length">
+              <template v-if="contactInfoData?.isGroup">
                 <button class="profile-edit-icon" @click="$refs.groupAvatarInput.click()" data-tooltip="Edit group photo">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-pencil-square" viewBox="0 0 16 16">
                     <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
@@ -517,7 +518,7 @@
               </template>
             </div>
 
-            <template v-if="contactInfoData.members?.length">
+            <template v-if="contactInfoData?.isGroup">
               <div class="contact-meta fs-6 mb-2">
                 {{ contactInfoData.members.length }} Members
               </div>
@@ -585,7 +586,7 @@
             </template>
             <div class="group-action-btns">
               <button
-                v-if="contactInfoData.members?.length"
+                v-if="contactInfoData?.isGroup"
                 class="leave-group-btn"
                 @click="leaveGroup(contactInfoData)"
               >
@@ -603,11 +604,11 @@
                 </svg>
                 Leave Group
               </button>
-              <button
-                v-if="contactInfoData.members?.length && contactInfoData.ownerId === user.username"
-                class="leave-group-btn"
-                @click="deleteGroup(contactInfoData)"
-              >
+                <button
+                  v-if="contactInfoData?.isGroup && contactInfoData.ownerId === user.username"
+                  class="leave-group-btn"
+                  @click="deleteGroup(contactInfoData)"
+                >
                 Delete Group
               </button>
             </div>
@@ -666,7 +667,7 @@
                 <template v-else>
                   {{ selectedChat.name }}
                   <span
-                    v-if="selectedChat.members?.length"
+                    v-if="selectedChat?.isGroup"
                     style="font-size: 13px; font-weight: 400; color: gray; margin-left: 4px;"
                   >
                     · {{ selectedChat.members.length }} Members
@@ -1134,6 +1135,7 @@
     </div>
     <ToastMessage message="Logging out..." v-model="showLogoutMessage" :duration="2000" />
     <ToastMessage message="Cannot upload more than 10 media at once :(" v-model="showMediaLimitToast" :duration="3000" />
+    <ToastMessage message="File is too large! Maximum size is 10MB." v-model="showFileSizeToast" :duration="3000" />
     <HeaderMenu
       :visible="headerMenu.visible"
       :class="{ measuring: headerMenu.measuring }"
@@ -1189,6 +1191,7 @@ import EmojiPicker from "../components/EmojiPicker.vue";
 import AvatarImg from "../components/AvatarImg.vue";
 import EditableField from "../components/EditableField.vue";
 import ToastMessage from "../components/ToastMessage.vue";
+import api from '../api/index.js';
 export default {
   components: {
   HeaderMenu,
@@ -1197,9 +1200,37 @@ export default {
   EditableField,
   ToastMessage,
   },
-  mounted() {
+  async mounted() {
     document.addEventListener("click", this.handleClickOutside);
     document.addEventListener("keydown", this.handleKeyDown);
+
+    try {
+      // Load user
+      const userData = await api.users.getMe();
+      this.user = {
+        name: userData.user.name,
+        username: userData.user.username,
+        email: userData.user.email,
+        phone: userData.user.phone,
+        avatar: userData.user.avatar,
+        createdAt: userData.user.createdAt,
+      };
+
+      // Load chats
+      const chatData = await api.chats.getAll();
+      this.chats = chatData.chats.map(chat => ({
+        ...chat,
+        messages: [],
+        pinned:   chat.pinned  || false,
+        muted:    chat.muted   || false,
+        hidden:   false,
+        blocked:  false,
+        pinnedAt: null,
+      }));
+
+    } catch (err) {
+      console.error('Failed to load data:', err.message);
+    }
   },
   beforeUnmount() {
     document.removeEventListener("click", this.handleClickOutside);
@@ -1211,6 +1242,7 @@ export default {
         visible: false,
         time: "",
       },
+      showFileSizeToast: false,
       showChangePassword: false,
       oldPassword: "",
       newPassword: "",
@@ -1250,6 +1282,7 @@ export default {
       },
       searchActive: false,
       showInviteSent: false,
+      inviteError: '',
       chatSearchQuery: "",
       searchResults: [],
       currentSearchIndex: 0,
@@ -1429,8 +1462,8 @@ export default {
     filteredGroupChats() {
       const q = this.groupSearch.toLowerCase();
       return this.chats.filter(
-        (c) => !c.hidden && !c.members?.length &&
-        (c.originalName || c.name).toLowerCase().includes(q)
+        (c) => !c.hidden && !c.isGroup &&
+        (c.name).toLowerCase().includes(q)
       );
     },
     sortedChats() {
@@ -1446,6 +1479,23 @@ export default {
     },
   },
   methods: {
+      toBase64(file) {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.readAsDataURL(file);
+        });
+      },
+    async updateProfile(field, value) {
+      // Update locally first so UI feels instant
+      this.user[field] = value;
+
+      try {
+        await api.users.updateMe({ [field]: value });
+      } catch (err) {
+        console.error('Failed to update profile:', err.message);
+      }
+    },
     openMessageInfo() {
       if (!this.messageMenu.message) return;
       this.messageInfo.time = this.formatTime(this.messageMenu.message.time) || "Unknown";
@@ -1504,10 +1554,23 @@ export default {
       this.contactInfoData = null;
       this.closeHeaderMenu();
     },
-    handleAvatarUpload(event) {
+    async handleAvatarUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
-      this.user.avatar = URL.createObjectURL(file);
+
+      if (file.size > 10 * 1024 * 1024) {
+        this.showFileSizeToast = true;
+        event.target.value = "";
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = e.target.result;
+        this.user.avatar = base64;
+        await this.updateProfile('avatar', base64);
+      };
+      reader.readAsDataURL(file);
       event.target.value = "";
     },
     startEditMember(index, currentName) {
@@ -1533,9 +1596,12 @@ export default {
       if (!this.selectedChat) return;
       const files = Array.from(event.dataTransfer.files);
       for (const file of files) {
+        if (file.size > 10 * 1024 * 1024) {
+          this.showFileSizeToast = true;
+          continue;
+        }
         if (this.pendingMedia.length >= 10) {
           this.showMediaLimitToast = true;
-          setTimeout(() => { this.showMediaLimitToast = false; }, 3000);
           break;
         }
         const url = URL.createObjectURL(file);
@@ -1557,9 +1623,43 @@ export default {
       this.showBlockedAccounts = false;
       this.showDeleteConfirm = false;
     },
-    sendInvite() {
-      this.newContactSearch = "";
-      this.showInviteSent = true;
+    async sendInvite() {
+      if (!this.newContactSearch.trim()) {
+        this.inviteError = 'Please enter a username';
+        return;
+      }
+
+      this.inviteError = '';
+      this.showInviteSent = false;
+
+      // Check if user is already in chats
+      const already = this.chats.find(c => 
+        !c.members?.length && c.username === this.newContactSearch.trim().toLowerCase()
+      );
+      if (already) {
+        this.inviteError = 'User already added!';
+        return;
+      }
+
+      try {
+        await api.chats.getOrCreate(this.newContactSearch.trim());
+
+        const chatData = await api.chats.getAll();
+        this.chats = chatData.chats.map(chat => ({
+          ...chat,
+          messages: [],
+          pinned:   chat.pinned  || false,
+          muted:    chat.muted   || false,
+          hidden:   false,
+          blocked:  false,
+          pinnedAt: null,
+        }));
+
+        this.newContactSearch = '';
+        this.showInviteSent = true;
+      } catch (err) {
+        this.inviteError = err.message;
+      }
     },
     clampMenuPosition(x, y) {
       const menuWidth = 220;
@@ -1585,7 +1685,7 @@ export default {
       const trimmed = this.chatNameInput.trim();
       if (trimmed) {
         chat.name = trimmed;
-        if (chat.members?.length) {
+        if (chat.isGroup) {
           chat.hasCustomName = true;
         }
       }
@@ -1652,17 +1752,20 @@ export default {
     triggerFileUpload() {
       this.$refs.fileInput.click();
     },
-    handleFileUpload(event) {
+    async handleFileUpload(event) {
       const files = Array.from(event.target.files);
       if (!files.length || !this.selectedChat) return;
 
       for (const file of files) {
+        if (file.size > 10 * 1024 * 1024) {
+          this.showFileSizeToast = true;
+          continue; // skip this file, keep going
+        }
         if (this.pendingMedia.length >= 10) {
           this.showMediaLimitToast = true;
-          setTimeout(() => { this.showMediaLimitToast = false; }, 3000);
           break;
         }
-        const url = URL.createObjectURL(file);
+        const url = await this.toBase64(file);
         let type = 'file';
         if (file.type.startsWith("video")) type = "video";
         else if (file.type.startsWith("image")) type = "image";
@@ -1760,7 +1863,7 @@ export default {
       this.lightbox.visible = false;
       this.lightbox.media = null;
     },
-    selectChat(chat) {
+    async selectChat(chat) {
       chat.hidden = false;
       this.selectedChat = chat;
       this.selectedChatForMenu = chat;
@@ -1771,6 +1874,24 @@ export default {
       this.contactInfoData = null;
       this.viewingOwnProfile = false;
       this.viewingSettings = false;
+
+      // Load messages from backend
+      try {
+        const data = await api.messages.getAll(chat.id);
+        chat.messages = data.messages.map(msg => ({
+          id: msg._id,
+          sender: msg.sender === this.user.username ? 'me' : msg.sender,
+          text: msg.text,
+          files: msg.files || [],
+          replyTo: msg.replyTo || null,
+          reactions: msg.reactions || [],
+          time: msg.createdAt,
+        }));
+      } catch (err) {
+        console.error('Failed to load messages:', err.message);
+        chat.messages = [];
+      }
+
       this.$nextTick(this.scrollToBottom);
     },
     closeChat(chat) {
@@ -1790,7 +1911,7 @@ export default {
         i.action.toString().includes("contactInfo"),
       );
       if (contactInfoItem) {
-        contactInfoItem.label = chat.members?.length ? "👥 Group info" : "👤 Contact Info";
+        contactInfoItem.label = chat.isGroup ? "👥 Group info" : "👤 Contact Info";
       }
 
       const previousChat = this.selectedChatForMenu;
@@ -1799,7 +1920,7 @@ export default {
       const pinItem = this.headerMenuItems.find((i) => i.action.toString().includes("pinChat"));
       const muteItem = this.headerMenuItems.find((i) => i.action.toString().includes("muteChat"));
       const blockItem = this.headerMenuItems.find((i) => i.action.toString().includes("blockUser"));
-      if (blockItem) blockItem.label = this.selectedChatForMenu.members?.length 
+      if (blockItem) blockItem.label = this.selectedChatForMenu?.isGroup
         ? "🚪 Leave Group" 
         : this.selectedChatForMenu.blocked ? "🔓 Unblock" : "⛔ Block";
       if (muteItem) muteItem.label = chat.muted ? "🔔 Unmute Notifications" : "🔕 Mute Notifications";
@@ -1827,7 +1948,7 @@ export default {
         i.action.toString().includes("contactInfo"),
       );
       if (contactInfoItem) {
-        contactInfoItem.label = this.selectedChatForMenu?.members?.length
+        contactInfoItem.label = this.selectedChatForMenu?.isGroup
           ? "👥 Group info"
           : "👤 Contact Info";
       }
@@ -1841,7 +1962,7 @@ export default {
       const muteItem = this.headerMenuItems.find((i) => i.action.toString().includes("muteChat"));
       if (this.selectedChatForMenu) {
         if (pinItem) pinItem.label = this.selectedChatForMenu.pinned ? "📍 Unpin Conversation" : "📌 Pin Conversation";
-      if (blockItem) blockItem.label = this.selectedChatForMenu.members?.length 
+      if (blockItem) blockItem.label = this.selectedChatForMenu?.isGroup
         ? "🚪 Leave Group" 
         : this.selectedChatForMenu.blocked ? "🔓 Unblock" : "⛔ Block";
         if (muteItem) muteItem.label = this.selectedChatForMenu.muted ? "🔔 Unmute Notifications" : "🔕 Mute Notifications";
@@ -1975,32 +2096,40 @@ export default {
     toggleTheme() {
       this.theme = this.theme === "light" ? "dark" : "light";
     },
-    sendMessage() {
+    async sendMessage() {
       if (!this.selectedChat || this.selectedChat.blocked) return;
       if (!this.newMessage.trim() && !this.pendingMedia.length) return;
 
       const text = this.newMessage.replace(/\n+/g, ' ').trim();
 
-      this.selectedChat.messages.push({
-        sender: "me",
-        text: text,
-        media: this.pendingMedia.length ? [...this.pendingMedia] : null,
-        replyTo: this.replyingTo || null,
-        time: new Date(),
-      });
+      try {
+        const data = await api.messages.send(this.selectedChat.id, {
+          text,
+          replyTo: this.replyingTo || null,
+          files: this.pendingMedia,
+        });
 
-      this.selectedChat.lastMessage = this.pendingMedia.length
-        ? this.pendingMedia.some((m) => m.type === "video")
-          ? "🎥 Video"
-          : this.pendingMedia.some((m) => m.type === "image")
-            ? "🖼️ Image"
-            : "📄 " + this.pendingMedia[0].name
-        : text;
+        const msg = data.message;
+        this.selectedChat.messages.push({
+          id:        msg._id,
+          sender:    'me',
+          text:      msg.text,
+          files:     msg.files || [],
+          replyTo:   msg.replyTo || null,
+          reactions: msg.reactions || [],
+          time:      msg.createdAt,
+        });
 
-      this.newMessage = "";
-      this.replyingTo = null;
-      this.pendingMedia = [];
-      this.$nextTick(this.scrollToBottom);
+        this.selectedChat.lastMessage = text || (this.pendingMedia.length ? '📎 File' : '');
+
+        this.newMessage = "";
+        this.replyingTo = null;
+        this.pendingMedia = [];
+        this.$nextTick(this.scrollToBottom);
+
+      } catch (err) {
+        console.error('Failed to send message:', err.message);
+      }
     },
     scrollToBottom() {
       const box = this.$refs.messagesBox;
@@ -4152,5 +4281,13 @@ export default {
 .msg-info-close:hover {
   background: #ff0000;
   color: white;
+}
+.invite-error-text {
+  color: #ff0000;
+  font-weight: 600;
+  font-size: 14px;
+  text-align: center;
+  margin-top: 8px;
+  margin-bottom: 8px;
 }
 </style>
