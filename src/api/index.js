@@ -100,6 +100,12 @@ export const chats = {
       body: JSON.stringify({ username }),
     });
   },
+  async setNickname(chatId, nickname) {
+  return request(`/api/chats/${chatId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ nickname }),
+  });
+},
 };
 
 // Messages
@@ -162,6 +168,20 @@ export const users = {
   // Lookup po usernameu
   async lookup(username) {
     return request(`/api/auth/lookup/${encodeURIComponent(username)}`);
+  },
+  
+  async changePassword(oldPassword, newPassword) {
+    return request('/api/auth/password', {
+      method: 'PATCH',
+      body: JSON.stringify({ oldPassword, newPassword }),
+    });
+  },
+
+  async blockUser(username, block) {
+    return request('/api/auth/block', {
+      method: 'POST',
+      body: JSON.stringify({ username, block }),
+    });
   },
 };
 

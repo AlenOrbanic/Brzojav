@@ -1203,9 +1203,7 @@ export default {
   async mounted() {
     document.addEventListener("click", this.handleClickOutside);
     document.addEventListener("keydown", this.handleKeyDown);
-
     try {
-      // Load user
       const userData = await api.users.getMe();
       this.user = {
         name: userData.user.name,
@@ -1215,19 +1213,11 @@ export default {
         avatar: userData.user.avatar,
         createdAt: userData.user.createdAt,
       };
+      this.settings.lastSeen = userData.user.showLastSeen ? 'shown' : 'hidden';
+      this.settings.allowStrangers = userData.user.allowStrangers ? 'on' : 'off';
 
-      // Load chats
       const chatData = await api.chats.getAll();
-      this.chats = chatData.chats.map(chat => ({
-        ...chat,
-        messages: [],
-        pinned:   chat.pinned  || false,
-        muted:    chat.muted   || false,
-        hidden:   false,
-        blocked:  false,
-        pinnedAt: null,
-      }));
-
+      this.chats = chatData.chats.map(this.mapChat);
     } catch (err) {
       console.error('Failed to load data:', err.message);
     }
@@ -1478,14 +1468,38 @@ export default {
       });
     },
   },
+  watch: {
+  'settings.lastSeen'(val) {
+    api.users.updateMe({ showLastSeen: val === 'shown' }).catch(console.error);
+  },
+  'settings.allowStrangers'(val) {
+    api.users.updateMe({ allowStrangers: val === 'on' }).catch(console.error);
+  },
+},
   methods: {
-      toBase64(file) {
-        return new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target.result);
-          reader.readAsDataURL(file);
-        });
-      },
+    async setNickname(chatId, nickname) {
+      return request(`/api/chats/${chatId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ nickname }),
+      });
+    },
+    mapChat(chat) {
+      return {
+        ...chat,
+        name:     chat.isGroup ? chat.name : (chat.otherUser?.name ?? 'Unknown'),
+        avatar:   chat.isGroup ? chat.avatar : (chat.otherUser?.avatar ?? ''),
+        username: chat.isGroup ? '' : (chat.otherUser?.username ?? ''),
+        lastSeen: chat.isGroup ? '' : (chat.otherUser?.lastSeen ?? ''),
+        phone:    chat.isGroup ? '' : (chat.otherUser?.phone ?? ''),
+        members:  chat.isGroup ? chat.members : null,
+        messages: [],
+        pinned:   chat.pinned  || false,
+        muted:    chat.muted   || false,
+        hidden:   false,
+        blocked:  false,
+        pinnedAt: null,
+      };
+    },
     async updateProfile(field, value) {
       // Update locally first so UI feels instant
       this.user[field] = value;
@@ -1512,47 +1526,81 @@ export default {
       const mins = String(d.getMinutes()).padStart(2, "0");
       return `${day}.${month}.${year}. at ${hours}:${mins}`;
     },
-    changePassword() {
-      this.oldPassword = "";
-      this.newPassword = "";
-      this.showChangePassword = false;
+    async changePassword() {
+      if (!this.oldPassword || !this.newPassword) return;
+      try {
+        await api.users.changePassword(this.oldPassword, this.newPassword);
+        this.oldPassword = '';
+        this.newPassword = '';
+        this.showChangePassword = false;
+      } catch (err) {
+        console.error('Failed to change password:', err.message);
+        // optionally show a toast here
+      }
     },
-    handleGroupAvatarUpload(event) {
+    async handleGroupAvatarUpload(event) {
       const file = event.target.files[0];
       if (!file || !this.contactInfoData) return;
-      this.contactInfoData.avatar = URL.createObjectURL(file);
+
+      if (file.size > 10 * 1024 * 1024) {
+        this.showFileSizeToast = true;
+        event.target.value = "";
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = e.target.result;
+        this.contactInfoData.avatar = base64;
+        // Keep sidebar and chat header in sync
+        const chat = this.chats.find(c => c.id === this.contactInfoData.id);
+        if (chat) chat.avatar = base64;
+        if (this.selectedChat?.id === this.contactInfoData.id) {
+          this.selectedChat.avatar = base64;
+        }
+        try {
+          await api.chats.updateGroup(this.contactInfoData.id, { avatar: base64 });
+        } catch (err) {
+          console.error('Failed to update group avatar:', err.message);
+        }
+      };
+      reader.readAsDataURL(file);
       event.target.value = "";
     },
-    kickMember(groupChat, memberIndex) {
+    async kickMember(groupChat, memberIndex) {
       if (!groupChat?.members) return;
       const kicked = groupChat.members[memberIndex];
-      groupChat.members.splice(memberIndex, 1);
-      if (!groupChat.hasCustomName) {
-        groupChat.name = groupChat.members.map(m => m.name).join(", ");
+      try {
+        await api.chats.kickMember(groupChat.id, kicked.username);
+        groupChat.members.splice(memberIndex, 1);
+        if (!groupChat.hasCustomName) {
+          groupChat.name = groupChat.members.map(m => m.name).join(', ');
+        }
+        groupChat.messages.push({
+          sender: 'system',
+          text: `${this.user.name} kicked ${kicked.name} from the group.`,
+        });
+        groupChat.lastMessage = `${this.user.name} kicked ${kicked.name}`;
+      } catch (err) {
+        console.error('Failed to kick member:', err.message);
       }
-      groupChat.messages.push({
-        sender: "system",
-        text: `${this.user.name} kicked ${kicked.name} from the group.`,
-      });
-      groupChat.lastMessage = `${this.user.name} kicked ${kicked.name}`;
     },
-    deleteGroup(chat) {
-      if (!chat) return;
-      const index = this.chats.indexOf(chat);
-      if (index !== -1) this.chats.splice(index, 1);
-      if (this.selectedChat?.id === chat.id) this.selectedChat = null;
-      this.viewingContactInfo = false;
-      this.contactInfoData = null;
-      this.closeHeaderMenu();
+    async deleteGroup(chat) {
+      await this.leaveGroup(chat);
     },
-    leaveGroup(chat) {
+    async leaveGroup(chat) {
       if (!chat) return;
-      const index = this.chats.indexOf(chat);
-      if (index !== -1) this.chats.splice(index, 1);
-      if (this.selectedChat?.id === chat.id) this.selectedChat = null;
-      this.viewingContactInfo = false;
-      this.contactInfoData = null;
-      this.closeHeaderMenu();
+      try {
+        await api.chats.leave(chat.id);
+        const index = this.chats.indexOf(chat);
+        if (index !== -1) this.chats.splice(index, 1);
+        if (this.selectedChat?.id === chat.id) this.selectedChat = null;
+        this.viewingContactInfo = false;
+        this.contactInfoData = null;
+        this.closeHeaderMenu();
+      } catch (err) {
+        console.error('Failed to leave group:', err.message);
+      }
     },
     async handleAvatarUpload(event) {
       const file = event.target.files[0];
@@ -1577,19 +1625,22 @@ export default {
       this.editingMember = index;
       this.editingMemberInput = currentName;
     },
-    saveMemberName(index) {
+    async saveMemberName(index) {
       const trimmed = this.editingMemberInput.trim();
       if (trimmed && this.contactInfoData?.members?.[index]) {
         const member = this.contactInfoData.members[index];
         member.name = trimmed;
         if (!this.contactInfoData.hasCustomName) {
-          this.contactInfoData.name = this.contactInfoData.members
-            .map((m) => m.name)
-            .join(", ");
+          this.contactInfoData.name = this.contactInfoData.members.map(m => m.name).join(', ');
+        }
+        try {
+          await api.chats.setNickname(this.contactInfoData.id, trimmed);
+        } catch (err) {
+          console.error('Failed to save nickname:', err.message);
         }
       }
       this.editingMember = null;
-      this.editingMemberInput = "";
+      this.editingMemberInput = '';
     },
     // Drag and drop fileova u chat
     handleDrop(event) {
@@ -1642,18 +1693,10 @@ export default {
       }
 
       try {
-        await api.chats.getOrCreate(this.newContactSearch.trim());
+        await api.chats.getOrCreate(this.newContactSearch.trim().replace(/^@/, ''));
 
         const chatData = await api.chats.getAll();
-        this.chats = chatData.chats.map(chat => ({
-          ...chat,
-          messages: [],
-          pinned:   chat.pinned  || false,
-          muted:    chat.muted   || false,
-          hidden:   false,
-          blocked:  false,
-          pinnedAt: null,
-        }));
+        this.chats = chatData.chats.map(this.mapChat);
 
         this.newContactSearch = '';
         this.showInviteSent = true;
@@ -1679,7 +1722,7 @@ export default {
       this.editingChatName = true;
       this.$nextTick(() => this.$refs.chatNameInput?.focus());
     },
-    saveChatName() {
+    async saveChatName() {
       const chat = this.selectedChat || this.contactInfoData;
       if (!chat) return;
       const trimmed = this.chatNameInput.trim();
@@ -1687,6 +1730,11 @@ export default {
         chat.name = trimmed;
         if (chat.isGroup) {
           chat.hasCustomName = true;
+          try {
+            await api.chats.updateGroup(chat.id, { name: trimmed });
+          } catch (err) {
+            console.error('Failed to update group name:', err.message);
+          }
         }
       }
       this.editingChatName = false;
@@ -1697,57 +1745,36 @@ export default {
       if (i === -1) this.selectedGroupMembers.push(chat);
       else this.selectedGroupMembers.splice(i, 1);
     },
-    createGroup() {
+    async createGroup() {
       if (this.selectedGroupMembers.length < 2) return;
 
-      const memberObjects = this.selectedGroupMembers.map((c) => ({
-        name: c.originalName || c.name,
-        avatar: c.avatar,
-        username: c.username,
-        lastSeen: "Recently",
-        isMe: false,
-      }));
+      // Strip leading @ if present
+      const memberUsernames = this.selectedGroupMembers.map(c => 
+        (c.username || '').replace(/^@/, '')
+      );
+      const name = this.selectedGroupMembers.map(c => c.originalName || c.name).join(', ');
 
-      const allMembers = [
-        {
-          name: this.user.name,
-          avatar: this.user.avatar,
-          username: this.user.username,
-          lastSeen: "Online",
-          isMe: true,
-          isOwner: true,
-        },
-        ...memberObjects,
-      ].filter(m => m.name);
+      try {
+        await api.chats.createGroup(name, memberUsernames);
 
-      const name = allMembers.map((m) => m.name).join(", ");
+        const chatData = await api.chats.getAll();
+        this.chats = chatData.chats.map(this.mapChat);
 
-      const newGroup = {
-        id: Date.now(),
-        name,
-        hasCustomName: false,
-        ownerId: this.user.username,
-        avatar: this.selectedGroupMembers[0].avatar,
-        lastMessage: "",
-        phone: "",
-        pinned: false,
-        pinnedAt: null,
-        muted: false,
-        hidden: false,
-        blocked: false,
-        messages: [],
-        members: allMembers,
-      };
+        // Select the newly created group
+        const newGroup = this.chats.find(c => c.isGroup && c.name === name);
+        this.selectedChat = newGroup || null;
 
-      this.chats.push(newGroup);
-      this.showNewChatMenu = false;
-      this.showNewGroupView = false;
-      this.groupSearch = "";
-      this.selectedGroupMembers = [];
-      this.selectedChat = newGroup;
-      this.viewingOwnProfile = false;
-      this.viewingContactInfo = false;
-      this.viewingSettings = false;
+        this.showNewChatMenu = false;
+        this.showNewGroupView = false;
+        this.groupSearch = '';
+        this.selectedGroupMembers = [];
+        this.viewingOwnProfile = false;
+        this.viewingContactInfo = false;
+        this.viewingSettings = false;
+
+      } catch (err) {
+        console.error('Failed to create group:', err.message);
+      }
     },
     triggerFileUpload() {
       this.$refs.fileInput.click();
@@ -1987,39 +2014,48 @@ export default {
       this.viewingSettings = false;
       this.closeHeaderMenu();
     },
-    muteChat(chat) {
+    async muteChat(chat) {
       if (!chat) return;
-
-      chat.muted = !chat.muted;
-
+      const newMuted = !chat.muted;
+      chat.muted = newMuted;
+      try {
+        await api.chats.updateGroup(chat.id, { muted: newMuted });
+      } catch (err) {
+        console.error('Failed to mute chat:', err.message);
+        chat.muted = !newMuted;
+      }
       this.closeHeaderMenu();
     },
-    pinChat(chat) {
+    async pinChat(chat) {
       if (!chat) return;
-
-      if (!chat.pinned) {
-        chat.pinned = true;
-        chat.pinnedAt = Date.now();
-      } else {
-        chat.pinned = false;
-        chat.pinnedAt = null;
+      const newPinned = !chat.pinned;
+      chat.pinned = newPinned;
+      chat.pinnedAt = newPinned ? Date.now() : null;
+      try {
+        await api.chats.updateGroup(chat.id, { pinned: newPinned });
+      } catch (err) {
+        console.error('Failed to pin chat:', err.message);
+        // revert
+        chat.pinned = !newPinned;
+        chat.pinnedAt = !newPinned ? Date.now() : null;
       }
-
       this.closeHeaderMenu();
     },
     closeContactInfo() {
       this.viewingContactInfo = false;
       this.contactInfoData = null;
     },
-    blockUser(chat) {
+    async blockUser(chat) {
       if (!chat) return;
-
-      chat.blocked = !chat.blocked;
-
-      if (chat.blocked && this.selectedChat?.id === chat.id) {
-        this.newMessage = "";
+      const newBlocked = !chat.blocked;
+      chat.blocked = newBlocked;
+      if (newBlocked && this.selectedChat?.id === chat.id) this.newMessage = '';
+      try {
+        await api.users.blockUser(chat.username, newBlocked);
+      } catch (err) {
+        console.error('Failed to block user:', err.message);
+        chat.blocked = !newBlocked;
       }
-
       this.closeHeaderMenu();
     },
     deleteChat(chat) {
@@ -2209,17 +2245,27 @@ export default {
         this.emojiPicker.visible = true;
       });
     },
-    pickEmoji(emoji) {
+    async pickEmoji(emoji) {
       const msg = this.pendingReactMessage;
       if (!msg) return;
-      msg.reactions = (msg.reactions || []).filter((r) => r.sender !== "me");
-      msg.reactions.push({ emoji, sender: "me", avatar: this.user.avatar });
+      try {
+        await api.messages.react(msg.id, emoji);
+        msg.reactions = (msg.reactions || []).filter(r => r.sender !== 'me');
+        msg.reactions.push({ emoji, sender: 'me', avatar: this.user.avatar });
+      } catch (err) {
+        console.error('Failed to react:', err.message);
+      }
       this.pendingReactMessage = null;
       this.emojiPicker.visible = false;
     },
-    removeReaction(msg, reaction) {
-      if (reaction.sender !== "me") return;
-      msg.reactions = msg.reactions.filter((r) => r !== reaction);
+    async removeReaction(msg, reaction) {
+      if (reaction.sender !== 'me') return;
+      try {
+        await api.messages.unreact(msg.id);
+        msg.reactions = msg.reactions.filter(r => r !== reaction);
+      } catch (err) {
+        console.error('Failed to remove reaction:', err.message);
+      }
     },
     pinMessage() {
       if (!this.messageMenu.message) return;
@@ -2230,19 +2276,20 @@ export default {
       }
       this.closeMessageMenu();
     },
-    deleteMessage() {
+    async deleteMessage() {
       if (!this.messageMenu.message || !this.selectedChat) return;
-      if (this.messageMenu.message.sender !== "me") return;
-      const index = this.selectedChat.messages.indexOf(
-        this.messageMenu.message,
-      );
-      if (index !== -1) {
-        this.selectedChat.messages.splice(index, 1);
-        // Update lastMessage preview in sidebar
-        const msgs = this.selectedChat.messages;
-        this.selectedChat.lastMessage = msgs.length
-          ? msgs[msgs.length - 1].text
-          : "";
+      if (this.messageMenu.message.sender !== 'me') return;
+      const msg = this.messageMenu.message;
+      try {
+        await api.messages.delete(msg.id);
+        const index = this.selectedChat.messages.indexOf(msg);
+        if (index !== -1) {
+          this.selectedChat.messages.splice(index, 1);
+          const msgs = this.selectedChat.messages;
+          this.selectedChat.lastMessage = msgs.length ? msgs[msgs.length - 1].text : '';
+        }
+      } catch (err) {
+        console.error('Failed to delete message:', err.message);
       }
       this.closeMessageMenu();
     },
