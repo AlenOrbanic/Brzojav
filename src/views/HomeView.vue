@@ -228,7 +228,16 @@
             </template>
           </template>
           <template v-else>
+            <div v-if="loadingChats" class="chats-loading" data-testid="chats-loading">
+              <span class="chats-loading-text">Loading chats</span>
+              <span class="chats-loading-dots">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
+              </span>
+            </div>
             <div
+              v-else
               v-for="chat in filteredChats"
               :key="chat.id"
               class="contact-item d-flex justify-content-between align-items-center"
@@ -268,6 +277,11 @@
                           d="M5.164 14H15c-.299-.199-.557-.553-.78-1-.9-1.8-1.22-5.12-1.22-6q0-.396-.06-.776l-.938.938c.02.708.157 2.154.457 3.58.161.767.377 1.566.663 2.258H6.164zm5.581-9.91a4 4 0 0 0-1.948-1.01L8 2.917l-.797.161A4 4 0 0 0 4 7c0 .628-.134 2.197-.459 3.742q-.075.358-.166.718l-1.653 1.653q.03-.055.059-.113C2.679 11.2 3 7.88 3 7c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0c.942.19 1.788.645 2.457 1.284zM10 15a2 2 0 1 1-4 0zm-9.375.625a.53.53 0 0 0 .75.75l14.75-14.75a.53.53 0 0 0-.75-.75z"
                         />
                       </svg>
+                    </span>
+                    <span
+                      v-if="!chat.isGroup && isUserBlocked(chat.username)"
+                        class="blocked-tag"
+                      >(Blocked)
                     </span>
                   </div>
                   <small class="text-muted d-block text-truncate">
@@ -360,7 +374,7 @@
                     <div class="fw-semibold">{{ chat.name }}</div>
                     <small class="username-tag">{{ chat.username }}</small>
                   </div>
-                  <button class="unblock-btn" @click="chat.blocked = false">Unblock</button>
+                  <button class="unblock-btn" @click="unblockChat(chat)">Unblock</button>
                 </div>
               </div>
               </div>
@@ -527,6 +541,8 @@
                 v-for="(member, i) in contactInfoData.members"
                 :key="i"
                 class="group-member-item"
+                @click.stop="openMemberMenu($event, member)"
+                @contextmenu.prevent.stop="openMemberMenu($event, member)"
               >
                 <AvatarImg :src="member.avatar" :size="36" />
                 <div class="group-member-info">
@@ -545,6 +561,7 @@
                       {{ member.name }}
                       <span v-if="member.isMe" style="font-size:10px;background:#ff0000;color:white;border-radius:8px;padding:1px 6px;font-weight:600;margin-left:2px;">You</span>
                       <span v-if="member.isOwner" class="owner-tag">Group owner</span>
+                       <span v-if="!member.isMe && isUserBlocked(member.username)" class="blocked-tag">(Blocked)</span>
                       <svg
                         @click="startEditMember(i, member.name)"
                         xmlns="http://www.w3.org/2000/svg"
@@ -579,6 +596,10 @@
               </div>
               <div class="contact-meta fs-6 mb-1">
                 Last seen: {{ contactInfoData.lastSeen }}
+              </div>
+              <div v-if="isContactBlocked" class="blocked-status-row mb-1">
+                <span class="blocked-status-text">This user is blocked</span>
+                <button class="unblock-btn" @click="unblockContact">Unblock</button>
               </div>
               <div class="contact-meta fs-6 mb-1">
                 {{ contactInfoData.phone }}
@@ -671,6 +692,11 @@
                     style="font-size: 13px; font-weight: 400; color: gray; margin-left: 4px;"
                   >
                     · {{ selectedChat.members.length }} Members
+                  </span>
+                  <span
+                    v-if="!selectedChat.isGroup && isUserBlocked(selectedChat.username)"
+                      class="blocked-tag"
+                    >(Blocked)
                   </span>
                 <span
                   class="chat-name-icon-slot"
@@ -826,7 +852,7 @@
             @drop.prevent="handleDrop"
           >
           <div
-            v-for="(msg, index) in selectedChat?.messages || []"
+            v-for="(msg, index) in visibleMessages"
             :key="index"
             class="mb-2"
             :class="msg.sender === 'system' ? 'text-center w-100' : (msg.sender === 'me' ? 'text-end' : 'text-start')"
@@ -1144,6 +1170,13 @@
       :items="headerMenuItems"
       @close="closeHeaderMenu"
     />
+    <HeaderMenu
+      :visible="memberMenu.visible"
+      :x="memberMenu.x"
+      :y="memberMenu.y"
+      :items="memberMenuItems"
+      @close="closeMemberMenu"
+    />
     <div v-if="lightbox.visible" class="lightbox" @click="closeLightbox">
       <div class="lightbox-media-wrapper">
         <div class="lightbox-close" @click.stop="closeLightbox">✕</div>
@@ -1220,6 +1253,8 @@ export default {
       this.chats = chatData.chats.map(this.mapChat);
     } catch (err) {
       console.error('Failed to load data:', err.message);
+    } finally {
+      this.loadingChats = false;
     }
   },
   beforeUnmount() {
@@ -1231,6 +1266,12 @@ export default {
       messageInfo: {
         visible: false,
         time: "",
+      },
+      memberMenu: {
+        visible: false,
+        x: 0,
+        y: 0,
+        member: null,
       },
       showFileSizeToast: false,
       showChangePassword: false,
@@ -1244,6 +1285,7 @@ export default {
         messageNotifications: 'on',
         allowStrangers: 'on',
       },
+      blockedUsernames: [],
       showBlockedAccounts: false,
       showDeleteConfirm: false,
       showNewContactView: false,
@@ -1373,69 +1415,54 @@ export default {
           action: () => this.openSharedMedia(this.selectedChatForMenu),
         },
       ],
-      chats: [
-        {
-          id: 1,
-          name: "John Doe",
-          originalName: "John Doe",
-          avatar: "https://i.pinimg.com/736x/10/ff/74/10ff74284ea2b3957b90b9556e05dce2.jpg",
-          lastMessage: "Hey!",
-          phone: "+1 555 123 4567",
-          username: "@johndoe",
-          pinned: false,
-          pinnedAt: null,
-          muted: false,
-          hidden: false,
-          blocked: false,
-          lastSeen: "Recently",
-          messages: [
-            { sender: "other", text: "Hello!" },
-            { sender: "me", text: "Hi there!" },
-          ],
-        },
-        {
-          id: 2,
-          name: "Alen Orban",
-          originalName: "Alen Orban",
-          avatar: "https://i.pinimg.com/originals/3e/60/44/3e6044ac70b25c8f767de5c253e521b9.gif",
-          lastMessage: "Bok!!!!",
-          phone: "+385 092 123 4567",
-          username: "@alenorban",
-          pinned: false,
-          pinnedAt: null,
-          muted: false,
-          hidden: false,
-          blocked: false,
-          lastSeen: "Recently",
-          messages: [
-            { sender: "other", text: "Ejla men!" },
-            { sender: "me", text: "Ojla" },
-          ],
-        },
-        {
-          id: 3,
-          name: "Chris Barnes",
-          originalName: "Chris Barnes",
-          avatar: "https://i.pinimg.com/736x/7a/58/22/7a5822bbab7afda54f48cf7d2a64284d.jpg",
-          lastMessage: "Yooo!",
-          phone: "+1 555 123 4567",
-          username: "@chrisbarnes",
-          pinned: false,
-          pinnedAt: null,
-          muted: false,
-          hidden: false,
-          blocked: false,
-          lastSeen: "Recently",
-          messages: [
-            { sender: "other", text: "Sup!" },
-            { sender: "me", text: "Hi there!" },
-          ],
-        },
-      ],
+      chats: [],
+      loadingChats: true,
       emojiPicker: { visible: false, x: 0, y: 0 },
     };
   },
   computed: {
+    isContactBlocked() {
+      if (!this.contactInfoData || this.contactInfoData.isGroup) return false;
+      return this.isUserBlocked(this.contactInfoData.username);
+    },
+    visibleMessages() {
+      const msgs = this.selectedChat?.messages || [];
+      if (!this.selectedChat?.isGroup) return msgs;
+
+      return msgs.filter(msg => {
+        if (msg.sender === 'system' || msg.sender === 'me') return true;
+        // Sakrij ako je pošiljatelj blokiran
+        return !this.isUserBlocked(msg.sender);
+      });
+    },
+    memberMenuItems() {
+      const m = this.memberMenu.member;
+      if (!m) return [];
+
+      const existingChat = this.chats.find(
+        c => !c.isGroup && c.username === m.username
+      );
+      const blocked = this.isUserBlocked(m.username);
+
+      return [
+        {
+          label: "👤 View Profile",
+          action: () => this.viewMemberProfile(m),
+        },
+        {
+          label: existingChat ? "💬 Open Chat" : "➕ Add to chats",
+          action: () => this.addMemberToChats(m),
+        },
+        {
+          label: existingChat?.muted ? "🔔 Unmute Messages" : "🔕 Mute Messages",
+          action: () => this.muteMember(m),
+        },
+        {
+          label: blocked ? "🔓 Unblock User" : "⛔ Block User",
+          action: () => this.blockMember(m),
+        },
+      ];
+    },
     filteredChats() {
       const search = this.globalSearch.toLowerCase();
 
@@ -1477,6 +1504,128 @@ export default {
   },
 },
   methods: {
+    unblockChat(chat) {
+      if (!chat) return;
+      chat.blocked = false;
+      this.blockedUsernames = this.blockedUsernames.filter(u => u !== chat.username);
+      api.users.blockUser(chat.username, false).catch(err =>
+        console.error('Failed to unblock user:', err.message)
+      );
+    },
+
+    unblockContact() {
+      if (!this.contactInfoData) return;
+      const username = this.contactInfoData.username;
+      const chat = this.chats.find(c => !c.isGroup && c.username === username);
+      if (chat) {
+        this.unblockChat(chat);
+      } else {
+        this.blockedUsernames = this.blockedUsernames.filter(u => u !== username);
+        api.users.blockUser(username, false).catch(err =>
+          console.error('Failed to unblock user:', err.message)
+        );
+      }
+    },
+    isUserBlocked(username) {
+      return this.blockedUsernames.includes(username);
+    },
+
+    blockMember(member) {
+      const wasBlocked = this.isUserBlocked(member.username);
+
+      const chat = this.chats.find(
+        c => !c.isGroup && c.username === member.username
+      );
+      if (chat) {
+        this.blockUser(chat);
+      } else {
+        api.users.blockUser(member.username, !wasBlocked).catch(err =>
+          console.error('Failed to block user:', err.message)
+        );
+      }
+
+      if (wasBlocked) {
+        this.blockedUsernames = this.blockedUsernames.filter(u => u !== member.username);
+      } else {
+        this.blockedUsernames.push(member.username);
+      }
+
+      this.closeMemberMenu();
+    },
+    openMemberMenu(event, member) {
+      if (member.isMe) return;
+
+      if (this.memberMenu.visible && this.memberMenu.member?.username === member.username) {
+        this.closeMemberMenu();
+        return;
+      }
+
+      this.memberMenu.member = member;
+      this.memberMenu.visible = true;
+      this.memberMenu.x = 0;
+      this.memberMenu.y = 0;
+      this.$nextTick(() => {
+        const pos = this.clampMenuPosition(event.clientX + 4, event.clientY + 4);
+        this.memberMenu.x = pos.x;
+        this.memberMenu.y = pos.y;
+      });
+    },
+
+    closeMemberMenu() {
+      this.memberMenu.visible = false;
+      this.memberMenu.member = null;
+    },
+
+    viewMemberProfile(member) {
+      this.contactInfoData = {
+        id: `member-${member.username}`,
+        name: member.name,
+        username: member.username,
+        avatar: member.avatar,
+        phone: member.phone || '',
+        lastSeen: member.lastSeen || '',
+        isGroup: false,
+      };
+      this.viewingContactInfo = true;
+      this.closeMemberMenu();
+    },
+
+    async addMemberToChats(member) {
+      this.closeMemberMenu();
+      const existing = this.chats.find(
+        c => !c.isGroup && c.username === member.username
+      );
+      if (existing) {
+        this.viewingContactInfo = false;
+        this.selectChat(existing);
+        return;
+      }
+      try {
+        await api.chats.getOrCreate((member.username || '').replace(/^@/, ''));
+        const chatData = await api.chats.getAll();
+        this.chats = chatData.chats.map(this.mapChat);
+        const newChat = this.chats.find(
+          c => !c.isGroup && c.username === member.username
+        );
+        if (newChat) {
+          this.viewingContactInfo = false;
+          this.selectChat(newChat);
+        }
+      } catch (err) {
+        console.error('Failed to add member to chats:', err.message);
+      }
+    },
+
+    muteMember(member) {
+      const chat = this.chats.find(
+        c => !c.isGroup && c.username === member.username
+      );
+      if (chat) {
+        this.muteChat(chat);
+      }
+      this.closeMemberMenu();
+    },
+
     async setNickname(chatId, nickname) {
       return request(`/api/chats/${chatId}`, {
         method: 'PATCH',
@@ -2049,6 +2198,15 @@ export default {
       if (!chat) return;
       const newBlocked = !chat.blocked;
       chat.blocked = newBlocked;
+
+      if (newBlocked) {
+        if (!this.blockedUsernames.includes(chat.username)) {
+          this.blockedUsernames.push(chat.username);
+        }
+      } else {
+        this.blockedUsernames = this.blockedUsernames.filter(u => u !== chat.username);
+      }
+
       if (newBlocked && this.selectedChat?.id === chat.id) this.newMessage = '';
       try {
         await api.users.blockUser(chat.username, newBlocked);
@@ -2094,6 +2252,7 @@ export default {
     handleKeyDown(event) {
       if (event.key === "Escape") {
         this.closeMessageMenu();
+        this.closeMemberMenu();
       }
 
       if (this.searchActive && this.searchResults.length) {
@@ -2109,6 +2268,7 @@ export default {
       const isHeaderButton = event.target.closest(".header-icon");
       const isContactMenuBtn = event.target.closest(".contact-menu-btn");
       const isContactItem = event.target.closest(".contact-item");
+      const isGroupMemberItem = event.target.closest(".group-member-item");
 
       if (messageMenu && !messageMenu.contains(event.target)) {
         this.closeMessageMenu();
@@ -2118,9 +2278,11 @@ export default {
         !headerMenu.contains(event.target) &&
         !isHeaderButton &&
         !isContactMenuBtn &&
-        !isContactItem
+        !isContactItem &&
+        !isGroupMemberItem
       ) {
         this.closeHeaderMenu();
+        this.closeMemberMenu();
       }
     },
     handleKeyPress(event) {
@@ -3708,6 +3870,7 @@ export default {
   padding: 4px 6px;
   border-radius: 8px;
   transition: background 0.2s ease;
+  cursor: pointer;
 }
 
 .light .group-member-item:hover {
@@ -4336,5 +4499,70 @@ export default {
   text-align: center;
   margin-top: 8px;
   margin-bottom: 8px;
+}
+.chats-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px 16px;
+  font-size: 20px;
+  font-style: italic;
+  opacity: 0.7;
+  animation: chatsLoadingFloat 2.4s ease-in-out infinite;
+}
+
+.chats-loading-text {
+  letter-spacing: 0.3px;
+}
+
+.chats-loading-dots {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 2px;
+}
+
+.chats-loading-dots .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+  animation: chatsLoadingBounce 1.2s ease-in-out infinite;
+}
+
+.chats-loading-dots .dot:nth-child(1) { animation-delay: 0s; }
+.chats-loading-dots .dot:nth-child(2) { animation-delay: 0.2s; }
+.chats-loading-dots .dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes chatsLoadingBounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+  40%           { transform: translateY(-5px); opacity: 1; }
+}
+
+@keyframes chatsLoadingFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-3px); }
+}
+.blocked-tag {
+  font-size: 11px;
+  color: gray;
+  font-weight: 500;
+  margin-left: 4px;
+  flex-shrink: 0;
+  font-style: italic;
+}
+.blocked-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.blocked-status-text {
+  color: gray;
+  font-style: italic;
+  font-size: 14px;
 }
 </style>
