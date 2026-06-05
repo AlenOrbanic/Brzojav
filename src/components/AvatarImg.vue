@@ -1,5 +1,6 @@
 <template>
   <img
+    v-bind="$attrs"
     :src="src"
     :width="size"
     :height="size"
@@ -12,6 +13,7 @@
 <script>
 export default {
   name: 'AvatarImg',
+  inheritAttrs: false,
   props: {
     src: { type: String, required: true },
     size: { type: Number, default: 40 },

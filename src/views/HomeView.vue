@@ -585,7 +585,7 @@
                       </button>
                     </template>
                   </div>
-                  <small class="contact-meta">{{ member.username }} · Last seen: {{ member.lastSeen }}</small>
+                  <small class="contact-meta">{{ member.username }} · Last seen: {{ formatTimestamp(member.lastSeen) }}</small>
                 </div>
               </div>
               </div>
@@ -595,7 +595,7 @@
                 {{ contactInfoData.username }}
               </div>
               <div class="contact-meta fs-6 mb-1">
-                Last seen: {{ contactInfoData.lastSeen }}
+                Last seen: {{ formatTimestamp(contactInfoData.lastSeen) }}
               </div>
               <div v-if="isContactBlocked" class="blocked-status-row mb-1">
                 <span class="blocked-status-text">This user is blocked</span>
@@ -884,7 +884,7 @@
                 style="flex-shrink: 0; margin-bottom: 2px;"
                 :data-tooltip="(selectedChat.members
                   ? (selectedChat.members.find(m => !m.isMe)?.name || selectedChat.name)
-                  : selectedChat.name) + (msg.time ? ' · ' + formatTime(msg.time) : '')"
+                  : selectedChat.name) + (msg.time ? ' · ' + formatTimestamp(msg.time) : '')"
                 class="msg-avatar"
               />
                 <div
@@ -948,7 +948,7 @@
                     <div class="reply-quote-text">{{ msg.replyTo.text }}</div>
                   </div>
                   <div
-                    v-if="msg.media && msg.media.length"
+                    v-if="msg.files && msg.files.length"
                     class="msg-media-wrap"
                   >
                     <div
@@ -957,12 +957,18 @@
                       style="display: inline-block"
                     >
                       <img
-                        v-if="m.type === 'image'"
+                        v-if="m.fileType === 'image'"
                         :src="m.url"
                         class="msg-media"
-                        @click="openLightbox(m)"
+                        @click="openLightbox({ type: m.fileType, url: m.url, name: m.name })"
                       />
-                      <video v-else-if="m.type === 'video'" :src="m.url" class="msg-media" controls />
+                      <video
+                       v-else-if="m.fileType === 'video'"
+                       :src="m.url" 
+                       class="msg-media"
+                       controls
+                       @click="openLightbox({ type: m.fileType, url: m.url, name: m.name })"
+                      />
                       <div v-else class="msg-file">
                         <span class="msg-file-icon">📄</span>
                         <div class="msg-file-info">
@@ -1011,6 +1017,13 @@
                     </div>
                   </div>
                 </div>
+                  <div
+                    v-if="hoveredMessage === index && msg.time"
+                    class="msg-timestamp msg-timestamp-delay"
+                    :class="msg.sender === 'me' ? 'msg-timestamp-me' : 'msg-timestamp-other'"
+                  >
+                    {{ formatTimestamp(msg.time) }}
+                  </div>
                 <div
                   v-if="hoveredMessage === index && msg.sender !== 'me'"
                   class="message-actions"
@@ -1178,17 +1191,60 @@
       @close="closeMemberMenu"
     />
     <div v-if="lightbox.visible" class="lightbox" @click="closeLightbox">
-      <div class="lightbox-media-wrapper">
-        <div class="lightbox-close" @click.stop="closeLightbox">✕</div>
+      <div class="lightbox-media-wrapper" @click.stop>
+
+        <!-- Info bar -->
+        <div class="lightbox-bar">
+          <div class="lightbox-bar-left">
+            <span class="lightbox-sender">{{ lightbox.media?.sender || 'Unknown' }}</span>
+            <span class="lightbox-time">{{ formatTimestamp(lightbox.media?.time) }}</span>
+          </div>
+          <div class="lightbox-bar-right">
+            <button
+              class="lightbox-action-btn"
+              data-tooltip="Go to message"
+              @click="lightboxGoToMessage"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8"/>
+              </svg>
+            </button>
+            <button
+              class="lightbox-action-btn"
+              data-tooltip="Pin message"
+              @click="lightboxPin"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M4.146.146A.5.5 0 0 1 4.5 0h7a.5.5 0 0 1 .5.5c0 .68-.342 1.174-.646 1.479-.126.125-.25.224-.354.298v4.431l.078.048c.203.127.476.314.751.555C12.36 7.775 13 8.527 13 9.5a.5.5 0 0 1-.5.5h-4v4.5c0 .276-.224 1.5-.5 1.5s-.5-1.224-.5-1.5V10h-4a.5.5 0 0 1-.5-.5c0-.973.64-1.725 1.17-2.189A6 6 0 0 1 5 6.708V2.277a3 3 0 0 1-.354-.298C4.342 1.674 4 1.179 4 .5a.5.5 0 0 1 .146-.354"/>
+              </svg>
+            </button>
+            <button
+              class="lightbox-action-btn"
+              data-tooltip="Reply"
+              @click="lightboxReply"
+            >
+              ⤶
+            </button>
+            <button
+              v-if="lightbox.media?.isMine"
+              class="lightbox-action-btn lightbox-delete-btn"
+              data-tooltip="Delete"
+              @click="lightboxDelete"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+              </svg>
+            </button>
+            <div class="lightbox-close" @click="closeLightbox">✕</div>
+          </div>
+        </div>
 
         <img
-          v-if="
-            lightbox.media?.type === 'image' || lightbox.media?.type === 'gif'
-          "
+          v-if="lightbox.media?.type === 'image' || lightbox.media?.type === 'gif'"
           :src="lightbox.media?.url"
           class="lightbox-content"
         />
-
         <video v-else class="lightbox-content" controls autoplay>
           <source :src="lightbox.media?.url" type="video/mp4" />
         </video>
@@ -1206,15 +1262,32 @@
       @close="emojiPicker.visible = false"
     />
     <div v-if="messageInfo.visible" class="msg-info-overlay" @click.self="messageInfo.visible = false">
-    <div class="msg-info-box">
-      <div class="msg-info-title">Message Info</div>
-      <div class="msg-info-row">
-        <span class="msg-info-label">✅ Delivered</span>
-        <span class="msg-info-value">{{ messageInfo.time }}</span>
+      <div class="msg-info-box">
+        <div class="msg-info-title">Message Info</div>
+        <div class="msg-info-row">
+          <span class="msg-info-label">✅ Delivered</span>
+          <span class="msg-info-value">{{ messageInfo.time }}</span>
+        </div>
+        <div v-if="messageInfo.reactions.length" class="msg-info-row">
+          <span class="msg-info-label">😀 Reactions</span>
+          <div class="msg-info-reactions">
+            <div
+              v-for="(r, i) in messageInfo.reactions"
+              :key="i"
+              class="msg-info-reaction-item"
+            >
+              <img :src="r.avatar" class="reaction-avatar" />
+              <span class="msg-info-reaction-name">{{ r.sender }}</span>
+              <span class="msg-info-reaction-emoji">{{ r.emoji }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-else class="msg-info-row">
+          <span class="msg-info-label" style="opacity:0.5">No reactions</span>
+        </div>
+        <button class="msg-info-close" @click="messageInfo.visible = false">Close</button>
       </div>
-      <button class="msg-info-close" @click="messageInfo.visible = false">Close</button>
     </div>
-  </div>
   </div>
 </template>
 
@@ -1266,6 +1339,7 @@ export default {
       messageInfo: {
         visible: false,
         time: "",
+        reactions: [],
       },
       memberMenu: {
         visible: false,
@@ -1342,43 +1416,6 @@ export default {
         x: 0,
         y: 0,
       },
-      sharedMedia: [
-        {
-          id: 1,
-          type: "image",
-          url: "https://i.pinimg.com/736x/77/36/82/77368296b7a80054a2277233d7bfbe0b.jpg",
-        },
-        {
-          id: 2,
-          type: "image",
-          url: "https://i.pinimg.com/736x/af/df/bc/afdfbcc120c6602097a0f9a7109214a5.jpg",
-        },
-        {
-          id: 3,
-          type: "gif",
-          url: "https://i.pinimg.com/originals/32/c3/a7/32c3a75b9d47ea321c108dc076708640.gif",
-        },
-        {
-          id: 4,
-          type: "image",
-          url: "https://i.pinimg.com/736x/4c/e0/0f/4ce00fd60c54afa644201398dc0533d4.jpg",
-        },
-        {
-          id: 5,
-          type: "image",
-          url: "https://i.pinimg.com/1200x/1a/1f/7a/1a1f7a9804716669cc2eb68bb80a1d24.jpg",
-        },
-        {
-          id: 6,
-          type: "image",
-          url: "https://i.pinimg.com/1200x/c6/01/e5/c601e591abec4594bb73db34b12eb812.jpg",
-        },
-        {
-          id: 7,
-          type: "video",
-          url: "https://cdn.discordapp.com/attachments/869655665575096410/1492082335359959040/PinLoad_ArpWire_TV_on_Instagram_24_Years_of_PlayStation_2_Today_marks_the_24th_annive_1775810540606.mp4?ex=69da0976&is=69d8b7f6&hm=89b3bce93e34b79d8a4c6cb45f35ac857a951ee8fe92188f905030fc770116f3&",
-        },
-      ],
       headerMenuItems: [
         {
           label: "👤 Contact Info",
@@ -1421,6 +1458,27 @@ export default {
     };
   },
   computed: {
+    sharedMedia() {
+      if (!this.selectedChat?.messages) return [];
+      const media = [];
+      for (const msg of this.selectedChat.messages) {
+        if (!msg.media?.length) continue;
+        for (const m of msg.media) {
+          if (m.fileType === 'image' || m.fileType === 'video' || m.fileType === 'gif') {
+            media.push({
+              url:      m.url,
+              type:     m.fileType,
+              name:     m.name,
+              msgRef:   msg,           // reference to the original message
+              sender:   msg.sender === 'me' ? this.user.name : msg.sender,
+              isMine:   msg.sender === 'me',
+              time:     msg.time,
+            });
+          }
+        }
+      }
+      return media;
+    },
     isContactBlocked() {
       if (!this.contactInfoData || this.contactInfoData.isGroup) return false;
       return this.isUserBlocked(this.contactInfoData.username);
@@ -1504,6 +1562,61 @@ export default {
   },
 },
   methods: {
+    lightboxGoToMessage() {
+      const msg = this.lightbox.media?.msgRef;
+      if (!msg || !this.selectedChat) return;
+      this.closeLightbox();
+      this.viewingContactInfo = false;
+      this.contactInfoData = null;
+      this.$nextTick(() => {
+        const index = this.selectedChat.messages.indexOf(msg);
+        if (index === -1) return;
+        const el = this.$refs.messagesBox?.children[index];
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    },
+
+    lightboxPin() {
+      const msg = this.lightbox.media?.msgRef;
+      if (!msg) return;
+      this.pinnedMessage = this.pinnedMessage === msg ? null : msg;
+      this.closeLightbox();
+    },
+
+    lightboxReply() {
+      const msg = this.lightbox.media?.msgRef;
+      if (!msg) return;
+      const senderName = msg.sender === 'me' ? this.user.name : this.selectedChat?.name;
+      this.replyingTo = { sender: senderName, text: '🖼️ Image' };
+      this.closeLightbox();
+      this.viewingContactInfo = false;
+      this.contactInfoData = null;
+      this.$nextTick(() => this.$refs.messageInput?.focus());
+    },
+
+    async lightboxDelete() {
+      const msg = this.lightbox.media?.msgRef;
+      if (!msg || msg.sender !== 'me' || !this.selectedChat) return;
+      try {
+        await api.messages.delete(msg.id);
+        const index = this.selectedChat.messages.indexOf(msg);
+        if (index !== -1) {
+          this.selectedChat.messages.splice(index, 1);
+          const msgs = this.selectedChat.messages;
+          this.selectedChat.lastMessage = msgs.length ? msgs[msgs.length - 1].text : '';
+        }
+      } catch (err) {
+        console.error('Failed to delete message:', err.message);
+      }
+      this.closeLightbox();
+    },
+    toBase64(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(file);
+      }); 
+    },
     unblockChat(chat) {
       if (!chat) return;
       chat.blocked = false;
@@ -1661,7 +1774,12 @@ export default {
     },
     openMessageInfo() {
       if (!this.messageMenu.message) return;
-      this.messageInfo.time = this.formatTime(this.messageMenu.message.time) || "Unknown";
+      this.messageInfo.time = this.formatTimestamp(this.messageMenu.message.time);
+      this.messageInfo.reactions = (this.messageMenu.message.reactions || []).map(r => ({
+        emoji:  r.emoji,
+        sender: r.sender === 'me' ? this.user.name : r.sender,
+        avatar: r.avatar || this.selectedChat?.avatar,
+      }));
       this.messageInfo.visible = true;
       this.closeMessageMenu();
     },
@@ -1674,6 +1792,22 @@ export default {
       const hours = String(d.getHours()).padStart(2, "0");
       const mins = String(d.getMinutes()).padStart(2, "0");
       return `${day}.${month}.${year}. at ${hours}:${mins}`;
+    },
+    formatTimestamp(raw) {
+      if (!raw) return 'Unknown';
+      const d = new Date(raw);
+      if (isNaN(d)) return raw;
+
+      const day   = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year  = d.getFullYear();
+
+      let hours   = d.getHours();
+      const mins  = String(d.getMinutes()).padStart(2, '0');
+      const ampm  = hours >= 12 ? 'pm' : 'am';
+      hours       = hours % 12 || 12;
+
+      return `${day}.${month}.${year}. ${hours}:${mins} ${ampm}`;
     },
     async changePassword() {
       if (!this.oldPassword || !this.newPassword) return;
@@ -2055,12 +2189,20 @@ export default {
       try {
         const data = await api.messages.getAll(chat.id);
         chat.messages = data.messages.map(msg => ({
-          id: msg._id,
-          sender: msg.sender === this.user.username ? 'me' : msg.sender,
-          text: msg.text,
-          files: msg.files || [],
-          replyTo: msg.replyTo || null,
-          reactions: msg.reactions || [],
+          id:        msg._id,
+          sender:    msg.sender === this.user.username ? 'me' : msg.sender,
+          text:      msg.text,
+          files:     msg.files || [],
+          media:     (msg.files || []).map(f => ({ fileType: f.fileType, url: f.url, name: f.name })),
+          replyTo:   msg.replyTo || null,
+          reactions: (msg.reactions || []).map(r => ({
+            emoji:  r.emoji,
+            sender: r.sender === this.user.username ? 'me' : r.sender,
+            avatar: r.sender === this.user.username
+              ? this.user.avatar
+              : (this.selectedChat?.members?.find(m => m.username === r.sender)?.avatar
+                  || this.selectedChat?.avatar),
+          })),
           time: msg.createdAt,
         }));
       } catch (err) {
@@ -2304,7 +2446,11 @@ export default {
         const data = await api.messages.send(this.selectedChat.id, {
           text,
           replyTo: this.replyingTo || null,
-          files: this.pendingMedia,
+          files: this.pendingMedia.map(m => ({
+            fileType: m.type,
+            url:      m.url,
+            name:     m.name,
+          })),
         });
 
         const msg = data.message;
@@ -2313,6 +2459,11 @@ export default {
           sender:    'me',
           text:      msg.text,
           files:     msg.files || [],
+          media:     (msg.files || []).map(f => ({   // ← add this
+            fileType: f.fileType,
+            url:      f.url,
+            name:     f.name,
+          })),
           replyTo:   msg.replyTo || null,
           reactions: msg.reactions || [],
           time:      msg.createdAt,
@@ -2345,18 +2496,29 @@ export default {
     openMessageMenu(event, msg) {
       event.stopPropagation();
 
-      const rect = event.currentTarget.getBoundingClientRect();
-
       this.messageMenu.visible = true;
       this.messageMenu.message = msg;
 
-      if (msg.sender === "me") {
-        this.messageMenu.x = rect.left - 150;
-      } else {
-        this.messageMenu.x = rect.right + 10;
-      }
+      // Da bude unutar chat area
+      const menuWidth  = 180;
+      const menuHeight = 220;
+      const padding    = 8;
 
-      this.messageMenu.y = rect.bottom + 5;
+      const chatArea = this.$refs.messagesBox?.closest('.chat-area');
+      const bounds   = chatArea
+        ? chatArea.getBoundingClientRect()
+        : { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight };
+
+      let x = event.clientX + 4;
+      let y = event.clientY + 4;
+
+      x = Math.min(x, bounds.right  - menuWidth  - padding);
+      x = Math.max(x, bounds.left   + padding);
+      y = Math.min(y, bounds.bottom - menuHeight - padding);
+      y = Math.max(y, bounds.top    + padding);
+
+      this.messageMenu.x = x;
+      this.messageMenu.y = y;
     },
 
     closeMessageMenu() {
@@ -3110,28 +3272,24 @@ export default {
 
 .lightbox {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-
+  top: 0; left: 0;
+  width: 100%; height: 100%;
   background: rgba(0, 0, 0, 0.92);
   display: flex;
   align-items: center;
   justify-content: center;
-
   z-index: 99999;
-
   animation: fadeIn 0.25s ease;
 }
 
 .lightbox-content {
   display: block;
   max-width: 90vw;
-  max-height: 90vh;
-  border-radius: 12px;
+  max-height: calc(90vh - 56px);
+  border-radius: 0 0 12px 12px;
   transform: scale(0.9);
   animation: zoomIn 0.25s ease forwards;
+  object-fit: contain;
 }
 
 @keyframes fadeIn {
@@ -3151,27 +3309,18 @@ export default {
 }
 
 .lightbox-close {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 10;
-
-  width: 40px;
-  height: 40px;
-
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-
-  font-size: 24px;
+  font-size: 18px;
   color: white;
-
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 50%;
-
   cursor: pointer;
-
   transition: transform 0.2s ease, background 0.2s ease;
+  flex-shrink: 0;
 }
 
 .lightbox-close:hover {
@@ -3181,9 +3330,92 @@ export default {
 
 .lightbox-media-wrapper {
   position: relative;
-  display: inline-block;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   max-width: 90vw;
   max-height: 90vh;
+}
+
+.lightbox-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 10px 10px 0 0;
+  gap: 12px;
+  backdrop-filter: blur(6px);
+}
+
+.lightbox-bar-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lightbox-sender {
+  color: white;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.lightbox-time {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+}
+
+.lightbox-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lightbox-action-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: background 0.2s ease, transform 0.15s ease;
+  position: relative;
+}
+
+.lightbox-action-btn:hover {
+  background: rgba(255, 0, 0, 0.5);
+  transform: scale(1.1);
+}
+
+.lightbox-action-btn::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 130%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: black;
+  color: white;
+  font-size: 11px;
+  padding: 3px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.lightbox-action-btn:hover::after {
+  opacity: 1;
+}
+
+.lightbox-delete-btn:hover {
+  background: rgba(255, 0, 0, 0.8) !important;
 }
 
 .light .contact-meta {
@@ -4556,7 +4788,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 10px;      
   margin-top: 4px;
 }
 
@@ -4564,5 +4796,63 @@ export default {
   color: gray;
   font-style: italic;
   font-size: 14px;
+}
+.msg-info-reactions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  width: 100%;
+}
+
+.msg-info-reaction-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 8px;
+}
+
+.light .msg-info-reaction-item {
+  background: rgba(255, 0, 0, 0.05);
+}
+
+.dark .msg-info-reaction-item {
+  background: rgba(255, 0, 0, 0.1);
+}
+
+.msg-info-reaction-name {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.msg-info-reaction-emoji {
+  font-size: 18px;
+}
+.msg-timestamp {
+  font-size: 11px;
+  white-space: nowrap;
+  align-self: flex-end;
+  margin-bottom: 4px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.75);
+  color: white !important;
+  border-radius: 8px;
+  pointer-events: none;
+  opacity: 0;
+  animation: timestampFadeIn 0.15s ease 1s forwards;
+}
+
+.msg-timestamp-me {
+  order: -1;
+}
+
+.msg-timestamp-other {
+  order: 1;
+}
+@keyframes timestampFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0);   }
 }
 </style>
