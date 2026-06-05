@@ -3,6 +3,7 @@
     <div
       v-if="visible"
       class="header-menu"
+      :class="theme"
       :style="{ top: y + 'px', left: x + 'px' }"
       @click.stop
     >
@@ -25,6 +26,7 @@ export default {
     x: { type: Number, default: 0 },
     y: { type: Number, default: 0 },
     items: { type: Array, default: () => [] },
+    theme: { type: String, default: 'light' },
   },
   emits: ["close", "item-click"],
   methods: {
@@ -92,13 +94,21 @@ export default {
   opacity: 0;
   transform: translateY(-6px) scale(0.95);
 }
-.dark .header-menu button {
+
+.header-menu.dark {
+  background: #1e1e1e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: white;
 }
 
-.dark .header-menu button:hover {
-  background: rgba(255, 255, 255, 0.1);
+.header-menu.dark button {
+  color: white;
 }
+
+.header-menu.dark button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .header-menu.measuring {
   opacity: 0;
   pointer-events: none;

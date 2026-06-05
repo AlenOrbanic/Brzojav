@@ -956,19 +956,35 @@
                       :key="i"
                       style="display: inline-block"
                     >
-                      <img
-                        v-if="m.fileType === 'image'"
-                        :src="m.url"
-                        class="msg-media"
-                        @click="openLightbox({ type: m.fileType, url: m.url, name: m.name })"
-                      />
-                      <video
-                       v-else-if="m.fileType === 'video'"
-                       :src="m.url" 
-                       class="msg-media"
-                       controls
-                       @click="openLightbox({ type: m.fileType, url: m.url, name: m.name })"
-                      />
+                    <img
+                      v-if="m.fileType === 'image'"
+                      :src="m.url"
+                      class="msg-media"
+                      @click="openLightbox({
+                        type:    m.fileType,
+                        url:     m.url,
+                        name:    m.name,
+                        msgRef:  msg,
+                        sender:  msg.sender === 'me' ? user.name : selectedChat?.name,
+                        isMine:  msg.sender === 'me',
+                        time:    msg.time,
+                      })"
+                    />
+                    <video
+                      v-else-if="m.fileType === 'video'"
+                      :src="m.url"
+                      class="msg-media"
+                      controls
+                      @click="openLightbox({
+                        type:    m.fileType,
+                        url:     m.url,
+                        name:    m.name,
+                        msgRef:  msg,
+                        sender:  msg.sender === 'me' ? user.name : selectedChat?.name,
+                        isMine:  msg.sender === 'me',
+                        time:    msg.time,
+                      })"
+                    />
                       <div v-else class="msg-file">
                         <span class="msg-file-icon">📄</span>
                         <div class="msg-file-info">
@@ -1181,6 +1197,7 @@
       :x="headerMenu.x"
       :y="headerMenu.y"
       :items="headerMenuItems"
+      :theme="theme"
       @close="closeHeaderMenu"
     />
     <HeaderMenu
@@ -1188,6 +1205,7 @@
       :x="memberMenu.x"
       :y="memberMenu.y"
       :items="memberMenuItems"
+      :theme="theme"
       @close="closeMemberMenu"
     />
     <div v-if="lightbox.visible" class="lightbox" @click="closeLightbox">
@@ -1579,7 +1597,12 @@ export default {
     lightboxPin() {
       const msg = this.lightbox.media?.msgRef;
       if (!msg) return;
-      this.pinnedMessage = this.pinnedMessage === msg ? null : msg;
+      if (this.pinnedMessage === msg) {
+        this.pinnedMessage = null;
+      } else {
+        if (!msg.text) msg.text = '🖼️ Image';
+        this.pinnedMessage = msg;
+      }
       this.closeLightbox();
     },
 
