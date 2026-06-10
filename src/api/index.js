@@ -120,10 +120,33 @@ export const messages = {
 
   // Send message
   async send(chatId, { text = '', replyTo = null, files = [] } = {}) {
-    return request(`/api/messages/${chatId}`, {
-      method: 'POST',
-      body: JSON.stringify({ text, replyTo, files }),
+    const token = getToken();
+    const form  = new FormData();
+
+    form.append('text', text);
+    if (replyTo) form.append('replyTo', JSON.stringify(replyTo));
+
+    for (const f of files) {
+      if (f.blob) {
+        form.append('files', f.blob, f.name);
+      }
+    }
+
+    const res = await fetch(`${BASE_URL}/api/messages/${chatId}`, {
+      method:  'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body:    form,
     });
+
+    const data = await res.json();
+    if (res.status === 401) {
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = '/login';
+      throw new Error('Session expired');
+    }
+    if (!res.ok || data.ok === false) throw new Error(data.error || `Request failed: ${res.status}`);
+    return data;
   },
 
   // Delete message

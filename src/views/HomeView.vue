@@ -989,12 +989,15 @@
                         <span class="msg-file-icon">📄</span>
                         <div class="msg-file-info">
                           <span class="msg-file-name">{{ m.name }}</span>
-                          <a :href="m.url" :download="m.name" class="msg-file-download">
+                          <button
+                            class="msg-file-download"
+                            @click="downloadFile(m.url, m.name)"
+                          >
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
                               <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
                               <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
                             </svg>
-                          </a>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -1465,10 +1468,6 @@ export default {
           label: "🧹 Delete Chat",
           action: () => this.deleteChat(this.selectedChatForMenu),
         },
-        {
-          label: "🖼️ Shared Media",
-          action: () => this.openSharedMedia(this.selectedChatForMenu),
-        },
       ],
       chats: [],
       loadingChats: true,
@@ -1580,6 +1579,23 @@ export default {
   },
 },
   methods: {
+    async downloadFile(url, filename) {
+      try {
+        const res         = await fetch(url);
+        const arrayBuffer = await res.arrayBuffer();
+        const blob        = new Blob([arrayBuffer], { type: 'application/octet-stream' });
+        const a           = document.createElement('a');
+        a.href            = URL.createObjectURL(blob);
+        a.download        = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+      } catch (err) {
+        console.error('Download failed:', err);
+        window.open(url, '_blank');
+      }
+    },
     lightboxGoToMessage() {
       const msg = this.lightbox.media?.msgRef;
       if (!msg || !this.selectedChat) return;
@@ -1632,13 +1648,6 @@ export default {
         console.error('Failed to delete message:', err.message);
       }
       this.closeLightbox();
-    },
-    toBase64(file) {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.readAsDataURL(file);
-      }); 
     },
     unblockChat(chat) {
       if (!chat) return;
@@ -1961,11 +1970,11 @@ export default {
           this.showMediaLimitToast = true;
           break;
         }
-        const url = URL.createObjectURL(file);
+        const previewUrl = URL.createObjectURL(file);
         let type = 'file';
-        if (file.type.startsWith("video")) type = "video";
-        else if (file.type.startsWith("image")) type = "image";
-        this.pendingMedia.push({ type, url, name: file.name });
+        if (file.type.startsWith('video')) type = 'video';
+        else if (file.type.startsWith('image')) type = 'image';
+        this.pendingMedia.push({ type, url: previewUrl, name: file.name, blob: file });
       }
       this.$nextTick(() => this.$refs.messageInput?.focus());
     },
@@ -2092,20 +2101,21 @@ export default {
       for (const file of files) {
         if (file.size > 10 * 1024 * 1024) {
           this.showFileSizeToast = true;
-          continue; // skip this file, keep going
+          continue;
         }
         if (this.pendingMedia.length >= 10) {
           this.showMediaLimitToast = true;
           break;
         }
-        const url = await this.toBase64(file);
+        // blob + object URL za preview
+        const previewUrl = URL.createObjectURL(file);
         let type = 'file';
-        if (file.type.startsWith("video")) type = "video";
-        else if (file.type.startsWith("image")) type = "image";
-        this.pendingMedia.push({ type, url, name: file.name });
+        if (file.type.startsWith('video')) type = 'video';
+        else if (file.type.startsWith('image')) type = 'image';
+        this.pendingMedia.push({ type, url: previewUrl, name: file.originalname || file.name, blob: file });
       }
 
-      event.target.value = "";
+      event.target.value = '';
       this.$nextTick(() => this.$refs.messageInput?.focus());
     },
     scrollToPinned() {
@@ -2393,14 +2403,6 @@ export default {
 
       this.closeHeaderMenu();
     },
-    openSharedMedia(chat) {
-      if (!chat) return;
-      this.contactInfoData = chat;
-      this.viewingContactInfo = true;
-      this.viewingOwnProfile = false;
-      this.viewingSettings = false;
-      this.closeHeaderMenu();
-    },
     logout() {
       this.showLogoutMessage = true;
 
@@ -2469,11 +2471,7 @@ export default {
         const data = await api.messages.send(this.selectedChat.id, {
           text,
           replyTo: this.replyingTo || null,
-          files: this.pendingMedia.map(m => ({
-            fileType: m.type,
-            url:      m.url,
-            name:     m.name,
-          })),
+          files:   this.pendingMedia, // pass the full objects including blob
         });
 
         const msg = data.message;
@@ -2482,7 +2480,7 @@ export default {
           sender:    'me',
           text:      msg.text,
           files:     msg.files || [],
-          media:     (msg.files || []).map(f => ({   // ← add this
+          media:     (msg.files || []).map(f => ({
             fileType: f.fileType,
             url:      f.url,
             name:     f.name,
@@ -2493,9 +2491,8 @@ export default {
         });
 
         this.selectedChat.lastMessage = text || (this.pendingMedia.length ? '📎 File' : '');
-
-        this.newMessage = "";
-        this.replyingTo = null;
+        this.newMessage   = '';
+        this.replyingTo   = null;
         this.pendingMedia = [];
         this.$nextTick(this.scrollToBottom);
 
