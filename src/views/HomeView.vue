@@ -1002,17 +1002,39 @@
                       </div>
                     </div>
                   </div>
-                  <span
-                    v-else-if="msg.text"
+                  <div
+                    v-if="msg.text"
                     class="d-inline-block p-2 rounded message"
                     :class="[
                       msg.sender === 'me' ? 'sent' : 'received',
                       isMessageMatched(index) ? 'highlighted' : '',
                       isCurrentMatch(index) ? 'active-highlight' : '',
                     ]"
+                    @vue:mounted="loadLinkPreview(msg)"
                   >
-                    {{ msg.text }}
-                  </span>
+                    <span v-html="renderMessageText(msg.text)"></span>
+
+                    <!-- Link preview card (now INSIDE the bubble) -->
+                    <a
+                      v-if="extractUrl(msg.text) && linkPreviews[extractUrl(msg.text)]"
+                      :href="extractUrl(msg.text)"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="link-preview"
+                      :class="msg.sender === 'me' ? 'link-preview-me' : 'link-preview-other'"
+                    >
+                      <img
+                        v-if="linkPreviews[extractUrl(msg.text)].image"
+                        :src="linkPreviews[extractUrl(msg.text)].image"
+                        class="link-preview-image"
+                      />
+                      <div class="link-preview-body">
+                        <div class="link-preview-title">{{ linkPreviews[extractUrl(msg.text)].title }}</div>
+                        <div class="link-preview-desc">{{ linkPreviews[extractUrl(msg.text)].description }}</div>
+                        <div class="link-preview-url">{{ extractUrl(msg.text) }}</div>
+                      </div>
+                    </a>
+                  </div>
                   <div
                     v-if="msg.reactions && msg.reactions.length"
                     class="reaction-row"
@@ -1319,6 +1341,7 @@ import AvatarImg from "../components/AvatarImg.vue";
 import EditableField from "../components/EditableField.vue";
 import ToastMessage from "../components/ToastMessage.vue";
 import api from '../api/index.js';
+import { io } from 'socket.io-client';
 export default {
   components: {
   HeaderMenu,
@@ -1328,23 +1351,27 @@ export default {
   ToastMessage,
   },
   async mounted() {
-    document.addEventListener("click", this.handleClickOutside);
-    document.addEventListener("keydown", this.handleKeyDown);
+    document.addEventListener('click', this.handleClickOutside);
+    document.addEventListener('keydown', this.handleKeyDown);
+
     try {
       const userData = await api.users.getMe();
       this.user = {
-        name: userData.user.name,
-        username: userData.user.username,
-        email: userData.user.email,
-        phone: userData.user.phone,
-        avatar: userData.user.avatar,
+        name:      userData.user.name,
+        username:  userData.user.username,
+        email:     userData.user.email,
+        phone:     userData.user.phone,
+        avatar:    userData.user.avatar,
         createdAt: userData.user.createdAt,
       };
-      this.settings.lastSeen = userData.user.showLastSeen ? 'shown' : 'hidden';
+      this.settings.lastSeen      = userData.user.showLastSeen ? 'shown' : 'hidden';
       this.settings.allowStrangers = userData.user.allowStrangers ? 'on' : 'off';
 
       const chatData = await api.chats.getAll();
       this.chats = chatData.chats.map(this.mapChat);
+
+      // Connect socket
+      this.connectSocket();
     } catch (err) {
       console.error('Failed to load data:', err.message);
     } finally {
@@ -1352,11 +1379,14 @@ export default {
     }
   },
   beforeUnmount() {
-    document.removeEventListener("click", this.handleClickOutside);
-    document.removeEventListener("keydown", this.handleKeyDown);
+    document.removeEventListener('click', this.handleClickOutside);
+    document.removeEventListener('keydown', this.handleKeyDown);
+    if (this.socket) this.socket.disconnect();
   },
   data() {
     return {
+      linkPreviews: {}, // url -> preview object
+      socket: null,
       messageInfo: {
         visible: false,
         time: "",
@@ -1579,6 +1609,82 @@ export default {
   },
 },
   methods: {
+    renderMessageText(text) {
+      if (!text) return '';
+      const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      return escaped.replace(
+        /(https?:\/\/[^\s]+)/g,
+        '<a href="$1" target="_blank" rel="noopener" class="msg-link">$1</a>'
+      );
+    },
+    extractUrl(text) {
+      if (!text) return null;
+      const match = text.match(/https?:\/\/[^\s]+/);
+      return match ? match[0] : null;
+    },
+
+    async loadLinkPreview(msg) {
+      const url = this.extractUrl(msg.text);
+      if (!url || this.linkPreviews[url] !== undefined) return;
+      this.linkPreviews[url] = null;
+      try {
+        const data = await api.links.preview(url);
+        if (data.preview) this.linkPreviews[url] = data.preview;
+      } catch {
+        this.linkPreviews[url] = null;
+      }
+    },
+    connectSocket() {
+      const BASE_URL = process.env.VUE_APP_API_URL || 'http://localhost:3001';
+      this.socket = io(BASE_URL);
+
+      this.socket.emit('register', this.user.username);
+
+      // Poruka od drugog usera
+      this.socket.on('new_message', ({ chatId, message }) => {
+        const chat = this.chats.find(c => c.id === chatId);
+        if (!chat) return;
+
+        chat.messages = chat.messages || [];
+        chat.messages.push({
+          id:        message.id,
+          sender:    message.sender,
+          text:      message.text,
+          files:     message.files || [],
+          media:     (message.files || []).map(f => ({
+            fileType: f.fileType,
+            url:      f.url,
+            name:     f.name,
+          })),
+          replyTo:   message.replyTo || null,
+          reactions: (message.reactions || []).map(r => ({
+            emoji:  r.emoji,
+            sender: r.sender,
+            avatar: this.chats.find(c => c.id === chatId)?.avatar || '',
+          })),
+          time: message.time,
+        });
+
+        chat.lastMessage = message.text || (message.files?.length ? '📎 File' : '');
+
+        // Auto scroll ako je chat otvoren
+        if (this.selectedChat?.id === chatId) {
+          this.$nextTick(this.scrollToBottom);
+        }
+      });
+
+      // Sidebar refresh kada se metadata promjeni
+      this.socket.on('chat_updated', ({ chatId, lastMessage }) => {
+        const chat = this.chats.find(c => c.id === chatId);
+        if (chat) chat.lastMessage = lastMessage;
+      });
+
+      // Netko je napravio novi chat
+      this.socket.on('chat_added', async () => {
+        const chatData = await api.chats.getAll();
+        this.chats = chatData.chats.map(this.mapChat);
+      });
+    },
     async downloadFile(url, filename) {
       try {
         const res         = await fetch(url);
@@ -4874,5 +4980,78 @@ export default {
 @keyframes timestampFadeIn {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0);   }
+}
+.link-preview {
+  display: block;
+  margin-top: 6px;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  max-width: 300px;
+  border: 1px solid rgba(255, 0, 0, 0.2);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  text-decoration: none;
+  color: inherit;
+}
+
+.link-preview:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(255, 0, 0, 0.2);
+}
+
+.link-preview-image {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  display: block;
+}
+
+.link-preview-body {
+  padding: 8px 10px;
+}
+
+.light .link-preview-body {
+  background: rgba(255, 0, 0, 0.04);
+}
+
+.dark .link-preview-body {
+  background: rgba(255, 0, 0, 0.08);
+}
+
+.link-preview-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.link-preview-desc {
+  font-size: 11px;
+  opacity: 0.7;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  margin-bottom: 4px;
+}
+
+.link-preview-url {
+  font-size: 10px;
+  color: #ff0000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.msg-link {
+  color: #ff6666;
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+.dark .msg-link {
+  color: #ff9999;
 }
 </style>

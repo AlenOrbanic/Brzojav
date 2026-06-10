@@ -208,5 +208,11 @@ export const users = {
   },
 };
 
+export const links = {
+  async preview(url) {
+    const encoded = encodeURIComponent(url);
+    return request(`/api/links/preview?url=${encoded}`);
+  },
+};
 export { getToken, getUser };
-export default { auth, chats, messages, users, getToken, getUser };
+export default { auth, chats, messages, users, links, getToken, getUser };
