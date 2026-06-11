@@ -241,7 +241,7 @@
               v-for="chat in filteredChats"
               :key="chat.id"
               class="contact-item d-flex justify-content-between align-items-center"
-              :class="{ active: selectedChat?.id === chat.id }"
+              :class="{ active: selectedChat?.id === chat.id, 'chat-deleted': chat.deleted }"
               @click="selectChat(chat)"
               @contextmenu.prevent="openChatMenu($event, chat)"
             >
@@ -382,7 +382,7 @@
             <div class="settings-row settings-row-column">
               <div class="d-flex align-items-center justify-content-between w-100 settings-row-header">
                 <span class="settings-label">Change password</span>
-                <button class="settings-change-btn" @click="showChangePassword = !showChangePassword">
+                <button v-if="!showChangePassword" class="settings-change-btn" @click="showChangePassword = true">
                   Change
                 </button>
               </div>
@@ -415,7 +415,7 @@
               <div class="delete-confirm-box">
                 <div class="delete-confirm-text">Are you sure you want to delete your account? This cannot be undone.</div>
                 <div class="delete-confirm-actions">
-                  <button class="delete-confirm-yes" @click="showDeleteConfirm = false">Yes</button>
+                  <button class="delete-confirm-yes" @click="confirmDeleteAccount">Yes</button>
                   <button class="delete-confirm-no" @click="showDeleteConfirm = false">No</button>
                 </div>
               </div>
@@ -541,8 +541,9 @@
                 v-for="(member, i) in contactInfoData.members"
                 :key="i"
                 class="group-member-item"
-                @click.stop="openMemberMenu($event, member)"
-                @contextmenu.prevent.stop="openMemberMenu($event, member)"
+                :class="{ 'member-deleted': member.deleted }"
+                @click.stop="!member.deleted && openMemberMenu($event, member)"
+                @contextmenu.prevent.stop="!member.deleted && openMemberMenu($event, member)"
               >
                 <AvatarImg :src="member.avatar" :size="36" />
                 <div class="group-member-info">
@@ -585,17 +586,17 @@
                       </button>
                     </template>
                   </div>
-                  <small class="contact-meta">{{ member.username }} · Last seen: {{ formatTimestamp(member.lastSeen) }}</small>
+                  <small class="contact-meta">{{ member.username ? '@' + member.username.replace(/^@/, '') : '' }} · Last seen: {{ member.lastSeen ? formatTime(member.lastSeen) : 'Hidden' }}</small>
                 </div>
               </div>
               </div>
             </template>
             <template v-else>
               <div class="contact-meta fs-6 mb-1 username-tag">
-                {{ contactInfoData.username }}
-              </div>
+                {{ contactInfoData.username ? '@' + contactInfoData.username.replace(/^@/, '') : '' }}
+            <template v-if="!contactInfoData.deleted">
               <div class="contact-meta fs-6 mb-1">
-                Last seen: {{ formatTimestamp(contactInfoData.lastSeen) }}
+                Last seen: {{ contactInfoData.lastSeen ? formatTimestamp(contactInfoData.lastSeen) : 'Hidden' }}
               </div>
               <div v-if="isContactBlocked" class="blocked-status-row mb-1">
                 <span class="blocked-status-text">This user is blocked</span>
@@ -603,6 +604,12 @@
               </div>
               <div class="contact-meta fs-6 mb-1">
                 {{ contactInfoData.phone }}
+              </div>
+            </template>
+
+            <div v-else class="deleted-user-notice">
+              This account has been deleted.
+            </div>
               </div>
             </template>
             <div class="group-action-btns">
@@ -1216,12 +1223,14 @@
     <ToastMessage message="Logging out..." v-model="showLogoutMessage" :duration="2000" />
     <ToastMessage message="Cannot upload more than 10 media at once :(" v-model="showMediaLimitToast" :duration="3000" />
     <ToastMessage message="File is too large! Maximum size is 10MB." v-model="showFileSizeToast" :duration="3000" />
+    <ToastMessage message="Password changed!" v-model="showPasswordChangedToast" :duration="3000" />
+    <ToastMessage message="Account deleted" v-model="showAccountDeletedToast" :duration="3000" />
     <HeaderMenu
       :visible="headerMenu.visible"
       :class="{ measuring: headerMenu.measuring }"
       :x="headerMenu.x"
       :y="headerMenu.y"
-      :items="headerMenuItems"
+      :items="filteredHeaderMenuItems"
       :theme="theme"
       @close="closeHeaderMenu"
     />
@@ -1399,6 +1408,8 @@ export default {
         member: null,
       },
       showFileSizeToast: false,
+      showPasswordChangedToast: false,
+      showAccountDeletedToast: false,
       showChangePassword: false,
       oldPassword: "",
       newPassword: "",
@@ -1599,16 +1610,41 @@ export default {
         return 0;
       });
     },
+    filteredHeaderMenuItems() {
+      const chat = this.selectedChatForMenu;
+      if (chat && !chat.isGroup && chat.deleted) {
+        return this.headerMenuItems.filter(it =>
+          /contact info|close chat|delete chat/i.test(it.label)
+        );
+      }
+      return this.headerMenuItems;
+    },
   },
   watch: {
-  'settings.lastSeen'(val) {
-    api.users.updateMe({ showLastSeen: val === 'shown' }).catch(console.error);
+    async 'settings.lastSeen'(val) {
+      await api.users.updateMe({ showLastSeen: val === 'shown' }).catch(console.error);
+      const chatData = await api.chats.getAll();
+      this.chats = chatData.chats.map(this.mapChat);
+    },
+    'settings.allowStrangers'(val) {
+      api.users.updateMe({ allowStrangers: val === 'on' }).catch(console.error);
+    },
   },
-  'settings.allowStrangers'(val) {
-    api.users.updateMe({ allowStrangers: val === 'on' }).catch(console.error);
-  },
-},
   methods: {
+    async confirmDeleteAccount() {
+      try {
+        await api.users.deleteMe();
+        this.showDeleteConfirm = false;
+        this.showAccountDeletedToast = true;
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        sessionStorage.removeItem("token");
+        sessionStorage.removeItem("user");
+        setTimeout(() => this.$router.replace("/login"), 1500);
+      } catch (err) {
+        console.error('Failed to delete account:', err.message);
+      }
+    },
     renderMessageText(text) {
       if (!text) return '';
       const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -1834,6 +1870,7 @@ export default {
         username: member.username,
         avatar: member.avatar,
         phone: member.phone || '',
+        deleted: member.deleted || false,
         lastSeen: member.lastSeen || '',
         isGroup: false,
       };
@@ -1891,6 +1928,7 @@ export default {
         username: chat.isGroup ? '' : (chat.otherUser?.username ?? ''),
         lastSeen: chat.isGroup ? '' : (chat.otherUser?.lastSeen ?? ''),
         phone:    chat.isGroup ? '' : (chat.otherUser?.phone ?? ''),
+        deleted:  chat.isGroup ? false : (chat.otherUser?.deleted ?? false),   // <-- ADD
         members:  chat.isGroup ? chat.members : null,
         messages: [],
         pinned:   chat.pinned  || false,
@@ -1954,9 +1992,9 @@ export default {
         this.oldPassword = '';
         this.newPassword = '';
         this.showChangePassword = false;
+        this.showPasswordChangedToast = true;
       } catch (err) {
         console.error('Failed to change password:', err.message);
-        // optionally show a toast here
       }
     },
     async handleGroupAvatarUpload(event) {
@@ -2436,13 +2474,29 @@ export default {
     closeHeaderMenu() {
       this.headerMenu.visible = false;
     },
-    contactInfo(chat) {
+    async contactInfo(chat) {
       if (!chat) return;
       this.contactInfoData = chat;
       this.viewingContactInfo = true;
       this.viewingOwnProfile = false;
       this.viewingSettings = false;
       this.closeHeaderMenu();
+
+      if (chat.isGroup) {
+        try {
+          const chatData = await api.chats.getAll();
+          const fresh = chatData.chats.find(c => c.id === chat.id || c._id === chat.id);
+          if (fresh) {
+            const mapped = this.mapChat(fresh);
+            // Update members in place
+            const existing = this.chats.find(c => c.id === chat.id);
+            if (existing) existing.members = mapped.members;
+            this.contactInfoData = { ...this.contactInfoData, members: mapped.members };
+          }
+        } catch (err) {
+          console.error('Failed to refresh contact info:', err.message);
+        }
+      }
     },
     async muteChat(chat) {
       if (!chat) return;
@@ -5053,5 +5107,24 @@ export default {
 
 .dark .msg-link {
   color: #ff9999;
+}
+.chat-deleted .fw-semibold,
+.chat-deleted small {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.member-deleted {
+  opacity: 0.6;
+  font-style: italic;
+  cursor: default;
+}
+
+.deleted-user-notice {
+  padding: 12px;
+  text-align: center;
+  font-size: 13px;
+  opacity: 0.7;
+  font-style: italic;
 }
 </style>

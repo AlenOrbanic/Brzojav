@@ -206,6 +206,9 @@ export const users = {
       body: JSON.stringify({ username, block }),
     });
   },
+  async deleteMe() {
+    return request('/api/auth/me', { method: 'DELETE' });
+  },
 };
 
 export const links = {
