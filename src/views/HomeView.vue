@@ -883,15 +883,11 @@
               >
               <AvatarImg
                 v-if="msg.sender !== 'me'"
-                :src="selectedChat.members
-                  ? (selectedChat.members.find(m => !m.isMe)?.avatar || selectedChat.avatar)
-                  : selectedChat.avatar"
+                :src="senderAvatar(msg)"
                 :size="28"
                 :margin="2"
                 style="flex-shrink: 0; margin-bottom: 2px;"
-                :data-tooltip="(selectedChat.members
-                  ? (selectedChat.members.find(m => !m.isMe)?.name || selectedChat.name)
-                  : selectedChat.name) + (msg.time ? ' · ' + formatTimestamp(msg.time) : '')"
+                :data-tooltip="senderName(msg) + (msg.time ? ' · ' + formatTimestamp(msg.time) : '')"
                 class="msg-avatar"
               />
                 <div
@@ -1121,7 +1117,13 @@
           class="input-area border-top"
         >
           <div
-            v-if="selectedChat.blocked"
+            v-if="!selectedChat.isGroup && selectedChat.deleted"
+            class="deleted-user-notice w-100 text-center p-3"
+          >
+            Cannot send messages to deleted accounts
+          </div>
+          <div
+            v-else-if="selectedChat.blocked"
             class="blocked-text w-100 text-center p-3"
           >
             User is blocked
@@ -1317,6 +1319,10 @@
       <div class="msg-info-box">
         <div class="msg-info-title">Message Info</div>
         <div class="msg-info-row">
+          <span class="msg-info-label">👤 Sent by</span>
+          <span class="msg-info-value">{{ messageInfo.sender }}</span>
+        </div>
+        <div class="msg-info-row">
           <span class="msg-info-label">✅ Delivered</span>
           <span class="msg-info-value">{{ messageInfo.time }}</span>
         </div>
@@ -1394,10 +1400,12 @@ export default {
   },
   data() {
     return {
+      DEFAULT_AVATAR: 'https://i.pinimg.com/1200x/c5/ab/41/c5ab41e3f9766798af79b40d535f45e0.jpg',
       linkPreviews: {}, // url -> preview object
       socket: null,
       messageInfo: {
         visible: false,
+        sender: "",
         time: "",
         reactions: [],
       },
@@ -1631,6 +1639,29 @@ export default {
     },
   },
   methods: {
+    senderAvatar(msg) {
+      if (!msg || !this.selectedChat) return this.DEFAULT_AVATAR;
+      if (this.selectedChat.isGroup && Array.isArray(this.selectedChat.members)) {
+        const m = this.selectedChat.members.find(x => x.username === msg.sender);
+        if (m && !m.deleted && m.avatar) return m.avatar;
+        return this.DEFAULT_AVATAR;
+      }
+      // DM
+      if (this.selectedChat.deleted) return this.DEFAULT_AVATAR;
+      return this.selectedChat.avatar || this.DEFAULT_AVATAR;
+    },
+
+    senderName(msg) {
+      if (!msg || !this.selectedChat) return 'Unknown';
+      if (msg.sender === 'me' || msg.sender === this.user.username) return this.user.name;
+      if (this.selectedChat.isGroup && Array.isArray(this.selectedChat.members)) {
+        const m = this.selectedChat.members.find(x => x.username === msg.sender);
+        if (m) return m.deleted ? 'Deleted user' : (m.name || m.username);
+        return 'Deleted user'; // sender not in members anymore
+      }
+      // DM
+      return this.selectedChat.deleted ? 'Deleted user' : (this.selectedChat.name || 'Unknown');
+    },
     async confirmDeleteAccount() {
       try {
         await api.users.deleteMe();
@@ -1913,7 +1944,6 @@ export default {
       }
       this.closeMemberMenu();
     },
-
     async setNickname(chatId, nickname) {
       return request(`/api/chats/${chatId}`, {
         method: 'PATCH',
@@ -1950,11 +1980,13 @@ export default {
     },
     openMessageInfo() {
       if (!this.messageMenu.message) return;
-      this.messageInfo.time = this.formatTimestamp(this.messageMenu.message.time);
-      this.messageInfo.reactions = (this.messageMenu.message.reactions || []).map(r => ({
+      const msg = this.messageMenu.message;
+      this.messageInfo.sender = this.senderName(msg);
+      this.messageInfo.time = this.formatTimestamp(msg.time);
+      this.messageInfo.reactions = (msg.reactions || []).map(r => ({
         emoji:  r.emoji,
         sender: r.sender === 'me' ? this.user.name : r.sender,
-        avatar: r.avatar || this.selectedChat?.avatar,
+        avatar: r.avatar || this.DEFAULT_AVATAR,
       }));
       this.messageInfo.visible = true;
       this.closeMessageMenu();
