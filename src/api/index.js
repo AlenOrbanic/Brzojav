@@ -20,7 +20,9 @@ async function request(path, opts = {}) {
       ...(opts.headers || {}),
     },
   });
-
+  return handleResponse(res);
+}
+async function handleResponse(res) {
   const data = await res.json();
 
   // Token expired or invalid — force logout
@@ -127,9 +129,7 @@ export const messages = {
     if (replyTo) form.append('replyTo', JSON.stringify(replyTo));
 
     for (const f of files) {
-      if (f.blob) {
-        form.append('files', f.blob, f.name);
-      }
+      if (f.blob) form.append('files', f.blob, f.name);
     }
 
     const res = await fetch(`${BASE_URL}/api/messages/${chatId}`, {
@@ -138,15 +138,7 @@ export const messages = {
       body:    form,
     });
 
-    const data = await res.json();
-    if (res.status === 401) {
-      localStorage.clear();
-      sessionStorage.clear();
-      window.location.href = '/login';
-      throw new Error('Session expired');
-    }
-    if (!res.ok || data.ok === false) throw new Error(data.error || `Request failed: ${res.status}`);
-    return data;
+    return handleResponse(res);
   },
 
   // Delete message

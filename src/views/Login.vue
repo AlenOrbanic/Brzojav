@@ -38,7 +38,7 @@
 
                   <div class="input-field">
                     <label>Email</label>
-                    <input v-model="email" type="text" required class="form-control" />
+                    <input v-model="email" type="email" required class="form-control" />
                   </div>
 
                   <div class="input-field">
@@ -142,9 +142,15 @@ async function handleSubmit() {
   }
 }
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 async function handleRegister() {
   if (!username.value || !email.value || !registerPassword.value) {
     errorMessage.value = "Username, email and password are required";
+    return;
+  }
+  if (!EMAIL_REGEX.test(email.value.trim())) {
+    errorMessage.value = "Please enter a valid email address";
     return;
   }
   try {
@@ -179,14 +185,6 @@ function saveSession(token, user) {
 </script>
 
 <style scoped>
-@import url("https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap");
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: "Open Sans", sans-serif;
-}
 
 .page {
   position: relative;

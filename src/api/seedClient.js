@@ -15,7 +15,6 @@ const SEED_NODES = [
 const HEARTBEAT_INTERVAL_MS = 60_000;
 
 let _heartbeatTimer = null;
-let _currentUser = null;
 
 // Probaj svaki seed node redom dok jedan ne odgovori
 async function trySeeds(path, opts = {}) {
@@ -27,7 +26,15 @@ async function trySeeds(path, opts = {}) {
         headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
         signal: AbortSignal.timeout?.(5000),
       });
-      return res; // vraća prvi uspješni Response
+
+      // Node je ziv ali vraća gresku — logiraj ali nastavi dalje
+      if (res.status >= 500) {
+        lastError = new Error(`${base} returned ${res.status}`);
+        console.warn(`[seedClient] ${base} unhealthy: ${res.status}`);
+        continue;
+      }
+
+      return res; // healthy response (2xx, 3xx, or 4xx)
     } catch (err) {
       lastError = err;
       console.warn(`[seedClient] ${base} unreachable: ${err.message}`);
@@ -49,7 +56,6 @@ async function register(username, p2pPort = 9000) {
   const data = await res.json();
   if (!data.ok) throw new Error(data.error || 'Registration failed');
 
-  _currentUser = username;
   _startHeartbeat(username);
 
   console.log(`[seedClient] Registered as "${username}"`, data.record);
@@ -70,15 +76,22 @@ async function lookup(username) {
 
 async function logout(username) {
   _stopHeartbeat();
+  const user = username || _currentUser;
   _currentUser = null;
+
+  if (!user) return; // nothing to log out
 
   try {
     await trySeeds('/api/users/logout', {
       method: 'POST',
-      body:   JSON.stringify({ username }),
+      body:   JSON.stringify({ username: user }),
     });
-  } catch {
-    // Ne trebamo ništa, ttl briše record nakon 5 min
+  } catch (err) {
+    // TTL briše record nakon 5 minuta od zadnjeg heartbeat-a
+    console.warn(
+      `[seedClient] Logout request failed for "${user}": ${err.message}. ` +
+      `Record will expire via TTL.`
+    );
   }
 }
 

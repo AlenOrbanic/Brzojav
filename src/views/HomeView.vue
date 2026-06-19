@@ -304,7 +304,7 @@
         <!-- Settings -->
 
         <div v-if="viewingSettings" class="contact-info-wrapper">
-          <button class="back-btn" @click="viewingSettings = false">← Back</button>
+          <button class="back-btn" @click="closeSettings">← Back</button>
           <div class="settings-view">
             <div class="settings-title">Settings</div>
             <div class="settings-row">
@@ -1229,7 +1229,6 @@
     <ToastMessage message="Account deleted" v-model="showAccountDeletedToast" :duration="3000" />
     <HeaderMenu
       :visible="headerMenu.visible"
-      :class="{ measuring: headerMenu.measuring }"
       :x="headerMenu.x"
       :y="headerMenu.y"
       :items="filteredHeaderMenuItems"
@@ -1400,6 +1399,7 @@ export default {
   },
   data() {
     return {
+      previousChat: null,
       DEFAULT_AVATAR: 'https://i.pinimg.com/1200x/c5/ab/41/c5ab41e3f9766798af79b40d535f45e0.jpg',
       linkPreviews: {}, // url -> preview object
       socket: null,
@@ -1482,7 +1482,6 @@ export default {
       },
       headerMenu: {
         visible: false,
-        measuring: false,
         x: 0,
         y: 0,
       },
@@ -1639,6 +1638,13 @@ export default {
     },
   },
   methods: {
+    closeSettings() {
+      this.viewingSettings = false;
+      if (this.previousChat) {
+        this.selectedChat = this.previousChat;
+        this.previousChat = null;
+      }
+    },
     senderAvatar(msg) {
       if (!msg || !this.selectedChat) return this.DEFAULT_AVATAR;
       if (this.selectedChat.isGroup && Array.isArray(this.selectedChat.members)) {
@@ -1944,12 +1950,6 @@ export default {
       }
       this.closeMemberMenu();
     },
-    async setNickname(chatId, nickname) {
-      return request(`/api/chats/${chatId}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ nickname }),
-      });
-    },
     mapChat(chat) {
       return {
         ...chat,
@@ -1969,6 +1969,14 @@ export default {
       };
     },
     async updateProfile(field, value) {
+      if (field === 'email') {
+        const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!EMAIL_REGEX.test(value.trim())) {
+          console.error('Invalid email format');
+          return;
+        }
+      }
+
       // Update locally first so UI feels instant
       this.user[field] = value;
 
@@ -2161,6 +2169,7 @@ export default {
       this.contactInfoData = null;
       this.viewingOwnProfile = false;
       this.viewingSettings = true;
+      this.previousChat = this.selectedChat;
       this.selectedChat = null;
       this.showBlockedAccounts = false;
       this.showDeleteConfirm = false;
