@@ -1381,6 +1381,7 @@ export default {
       this.settings.lastSeen      = userData.user.showLastSeen ? 'shown' : 'hidden';
       this.settings.allowStrangers = userData.user.allowStrangers ? 'on' : 'off';
       this.settings.messageNotifications = userData.user.notificationsEnabled ? 'on' : 'off';
+      this.theme = userData.user.theme === 'dark' ? 'dark' : 'light';
 
       const chatData = await api.chats.getAll();
       this.chats = chatData.chats.map(this.mapChat);
@@ -1640,6 +1641,9 @@ export default {
     },
     'settings.messageNotifications'(val) {
       api.users.updateMe({ notificationsEnabled: val === 'on' }).catch(console.error);
+    },
+    theme(val) {
+      api.users.updateMe({ theme: val }).catch(console.error);
     },
   },
   methods: {
