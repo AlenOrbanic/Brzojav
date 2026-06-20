@@ -1380,6 +1380,7 @@ export default {
       };
       this.settings.lastSeen      = userData.user.showLastSeen ? 'shown' : 'hidden';
       this.settings.allowStrangers = userData.user.allowStrangers ? 'on' : 'off';
+      this.settings.messageNotifications = userData.user.notificationsEnabled ? 'on' : 'off';
 
       const chatData = await api.chats.getAll();
       this.chats = chatData.chats.map(this.mapChat);
@@ -1403,6 +1404,7 @@ export default {
       DEFAULT_AVATAR: 'https://i.pinimg.com/1200x/c5/ab/41/c5ab41e3f9766798af79b40d535f45e0.jpg',
       linkPreviews: {}, // url -> preview object
       socket: null,
+      notificationSound: new Audio('/sounds/notification.mp3'),
       messageInfo: {
         visible: false,
         sender: "",
@@ -1636,6 +1638,9 @@ export default {
     'settings.allowStrangers'(val) {
       api.users.updateMe({ allowStrangers: val === 'on' }).catch(console.error);
     },
+    'settings.messageNotifications'(val) {
+      api.users.updateMe({ notificationsEnabled: val === 'on' }).catch(console.error);
+    },
   },
   methods: {
     closeSettings() {
@@ -1709,9 +1714,9 @@ export default {
     },
     connectSocket() {
       const BASE_URL = process.env.VUE_APP_API_URL || 'http://localhost:3001';
-      this.socket = io(BASE_URL);
-
-      this.socket.emit('register', this.user.username);
+      this.socket = io(BASE_URL, {
+        auth: { token: api.getToken() },
+      });
 
       // Poruka od drugog usera
       this.socket.on('new_message', ({ chatId, message }) => {
@@ -1739,6 +1744,19 @@ export default {
         });
 
         chat.lastMessage = message.text || (message.files?.length ? '📎 File' : '');
+
+        // Sound notification — samo ako je tab/window neaktivan i postavka je 'on'
+        const isTabActive = !document.hidden && document.hasFocus();
+        if (
+          message.sender !== this.user.username &&
+          this.settings.messageNotifications === 'on' &&
+          !isTabActive
+        ) {
+          this.notificationSound.currentTime = 0;
+          this.notificationSound.play().catch(() => {
+            // Browseri mogu blokirati autoplay dok user ne interaktira sa stranicom — ignoriraj
+          });
+        }
 
         // Auto scroll ako je chat otvoren
         if (this.selectedChat?.id === chatId) {
