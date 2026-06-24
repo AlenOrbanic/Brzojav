@@ -1777,6 +1777,28 @@ export default {
         const chatData = await api.chats.getAll();
         this.chats = chatData.chats.map(this.mapChat);
       });
+
+      this.socket.on('reactions_updated', async ({ chatId, messageId }) => {
+        if (this.selectedChat?.id !== chatId) return; // nismo u chatu — vidjet ćemo kad otvorimo
+        const chat = this.selectedChat;
+        const existing = chat.messages?.find(m => String(m.id) === String(messageId));
+        if (!existing) return;
+        try {
+          const data = await api.messages.getAll(chatId, 50);
+          const fresh = (data.messages || []).find(m => String(m._id) === String(messageId));
+          if (!fresh) return;
+          const myName = this.user.username;
+          existing.reactions = (fresh.reactions || []).map(r => ({
+            emoji:  r.emoji,
+            sender: r.sender === myName ? 'me' : r.sender,
+            avatar: r.sender === myName
+              ? this.user.avatar
+              : (chat.members?.find?.(m => m.username === r.sender)?.avatar || chat.avatar || ''),
+          }));
+        } catch (err) {
+          console.warn('[reactions_updated] refetch failed:', err.message);
+        }
+      });
     },
     // P2P handler - prima poruke direktno od drugog browsera
     _onP2PMessage(fromUsername, payload) {
@@ -1804,6 +1826,23 @@ export default {
           time:       payload.time || new Date().toISOString(),
           _pendingFiles: (payload.fileMeta || []).map(f => f.transferId),
         }, fromUsername);
+        return;
+      }
+
+      if (payload.kind === 'reactions') {
+        // Live update reakcija stigao preko P2P DataChannela
+        const chat = this.chats.find(c => c.id === payload.chatId);
+        if (!chat || !chat.messages) return;
+        const msg = chat.messages.find(m => String(m.id) === String(payload.messageId));
+        if (!msg) return;
+        const myName = this.user.username;
+        msg.reactions = (payload.reactions || []).map(r => ({
+          emoji:  r.emoji,
+          sender: r.sender === myName ? 'me' : r.sender,
+          avatar: r.sender === myName
+            ? this.user.avatar
+            : (chat.members?.find?.(m => m.username === r.sender)?.avatar || chat.avatar || ''),
+        }));
         return;
       }
 
@@ -2056,6 +2095,9 @@ export default {
       this.closeMemberMenu();
     },
     mapChat(chat) {
+      const lastMsgAt  = chat.lastMessageAt ? new Date(chat.lastMessageAt).getTime() : 0;
+      const lastReadAt = chat.lastReadAt    ? new Date(chat.lastReadAt).getTime()    : 0;
+      const initialUnread = lastMsgAt > 0 && lastMsgAt > lastReadAt;
       return {
         ...chat,
         name:     chat.isGroup ? chat.name : (chat.otherUser?.name ?? 'Unknown'),
@@ -2071,7 +2113,8 @@ export default {
         hidden:   false,
         blocked:  false,
         pinnedAt: null,
-        unread:   false,
+        unread:   initialUnread,
+        lastReadAt: chat.lastReadAt || null,
       };
     },
     async updateProfile(field, value) {
@@ -2510,6 +2553,11 @@ export default {
       this.viewingOwnProfile = false;
       this.viewingSettings = false;
 
+      // Server-side mark as read
+      api.chats.markRead(chat.id).then(({ lastReadAt }) => {
+        chat.lastReadAt = lastReadAt;
+      }).catch(err => console.warn('[markRead]', err.message));
+
       // Proaktivno otvori WebRTC DataChannel s recipientima ovog chata
       // (za 1-on-1 chat to je chat.username; za grupu svi članovi osim mene)
       const recipients = this._chatRecipients(chat);
@@ -2855,7 +2903,7 @@ export default {
             for (let i = 0; i < 15 && !p2p.isOpen(u); i++) {
               await new Promise(r => setTimeout(r, 100));
             }
-            if (!p2p.isOpen(u)) continue;  // peer offline - server fallback će dostaviti hint
+            if (!p2p.isOpen(u)) continue;  // peer offline → server fallback će dostaviti hint
             p2p.sendJSON(u, p2pPayload);
             for (let i = 0; i < pending.length; i++) {
               const f = pending[i];
@@ -2984,10 +3032,12 @@ export default {
     async pickEmoji(emoji) {
       const msg = this.pendingReactMessage;
       if (!msg) return;
+      const chat = this.selectedChat;
       try {
         await api.messages.react(msg.id, emoji);
         msg.reactions = (msg.reactions || []).filter(r => r.sender !== 'me');
         msg.reactions.push({ emoji, sender: 'me', avatar: this.user.avatar });
+        this._p2pBroadcastReactions(chat, msg);
       } catch (err) {
         console.error('Failed to react:', err.message);
       }
@@ -2996,11 +3046,31 @@ export default {
     },
     async removeReaction(msg, reaction) {
       if (reaction.sender !== 'me') return;
+      const chat = this.selectedChat;
       try {
         await api.messages.unreact(msg.id);
         msg.reactions = msg.reactions.filter(r => r !== reaction);
+        this._p2pBroadcastReactions(chat, msg);
       } catch (err) {
         console.error('Failed to remove reaction:', err.message);
+      }
+    },
+    // Pošalji ažuriranu listu reakcija svim drugim članovima chata
+    _p2pBroadcastReactions(chat, msg) {
+      if (!chat || !msg) return;
+      const recipients = this._chatRecipients(chat);
+      const reactionsForWire = (msg.reactions || []).map(r => ({
+        emoji:  r.emoji,
+        sender: r.sender === 'me' ? this.user.username : r.sender,
+      }));
+      const payload = {
+        kind:       'reactions',
+        chatId:     chat.id,
+        messageId:  msg.id,
+        reactions:  reactionsForWire,
+      };
+      for (const u of recipients) {
+        if (p2p.isOpen(u)) p2p.sendJSON(u, payload);
       }
     },
     pinMessage() {

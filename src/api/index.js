@@ -108,6 +108,11 @@ export const chats = {
     body: JSON.stringify({ nickname }),
   });
 },
+
+  // Označi chat kao pročitan (postavi server-side lastReadAt = now)
+  async markRead(chatId) {
+    return request(`/api/chats/${chatId}/read`, { method: 'POST' });
+  },
 };
 
 // Messages
