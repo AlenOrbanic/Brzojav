@@ -241,7 +241,7 @@
               v-for="chat in filteredChats"
               :key="chat.id"
               class="contact-item d-flex justify-content-between align-items-center"
-              :class="{ active: selectedChat?.id === chat.id, 'chat-deleted': chat.deleted }"
+              :class="{ active: selectedChat?.id === chat.id, 'chat-deleted': chat.deleted, unread: chat.unread }"
               @click="selectChat(chat)"
               @contextmenu.prevent="openChatMenu($event, chat)"
             >
@@ -1356,6 +1356,7 @@ import EditableField from "../components/EditableField.vue";
 import ToastMessage from "../components/ToastMessage.vue";
 import api from '../api/index.js';
 import { io } from 'socket.io-client';
+import p2p from '../p2p/peerConnection.js';
 export default {
   components: {
   HeaderMenu,
@@ -1398,6 +1399,7 @@ export default {
     document.removeEventListener('click', this.handleClickOutside);
     document.removeEventListener('keydown', this.handleKeyDown);
     if (this.socket) this.socket.disconnect();
+    p2p.closeAll();
   },
   data() {
     return {
@@ -1722,49 +1724,45 @@ export default {
         auth: { token: api.getToken() },
       });
 
-      // Poruka od drugog usera
-      this.socket.on('new_message', ({ chatId, message }) => {
+      // signaling preko Socket.IO konekcije
+      // Server samo relaya SDP/ICE pakete (event: webrtc-signal).
+      // Stvarni sadržaj poruke ide preko WebRTC DataChannela.
+      p2p.init(this.socket, this.user.username);
+      p2p.onMessage(this._onP2PMessage);
+
+      // Server šalje SAMO hint (chatId, messageId, clientId, sender) - NE sadržaj.
+      // Ako smo poruku već dobili preko P2P (clientId match), ignoriraj.
+      // Inače je peer bio offline / DataChannel nije otvoren - povuci je sa servera.
+      this.socket.on('new_message', async ({ chatId, messageId, clientId, sender }) => {
         const chat = this.chats.find(c => c.id === chatId);
         if (!chat) return;
-
         chat.messages = chat.messages || [];
-        chat.messages.push({
-          id:        message.id,
-          sender:    message.sender,
-          text:      message.text,
-          files:     message.files || [],
-          media:     (message.files || []).map(f => ({
-            fileType: f.fileType,
-            url:      f.url,
-            name:     f.name,
-          })),
-          replyTo:   message.replyTo || null,
-          reactions: (message.reactions || []).map(r => ({
-            emoji:  r.emoji,
-            sender: r.sender,
-            avatar: this.chats.find(c => c.id === chatId)?.avatar || '',
-          })),
-          time: message.time,
-        });
 
-        chat.lastMessage = message.text || (message.files?.length ? '📎 File' : '');
+        // Dedupe — provjeri jesmo li već primili preko P2P
+        const already = chat.messages.find(m =>
+          (clientId && m._clientId === clientId) ||
+          (messageId && String(m.id) === String(messageId))
+        );
+        if (already) return;
 
-        // Sound notification — samo ako je tab/window neaktivan i postavka je 'on'
-        const isTabActive = !document.hidden && document.hasFocus();
-        if (
-          message.sender !== this.user.username &&
-          this.settings.messageNotifications === 'on' &&
-          !isTabActive
-        ) {
-          this.notificationSound.currentTime = 0;
-          this.notificationSound.play().catch(() => {
-            // Browseri mogu blokirati autoplay dok user ne interaktira sa stranicom — ignoriraj
-          });
-        }
-
-        // Auto scroll ako je chat otvoren
-        if (this.selectedChat?.id === chatId) {
-          this.$nextTick(this.scrollToBottom);
+        // Nije stiglo preko P2P (peer je bio offline ili DC nije bio otvoren).
+        // Povuci s servera kao fallback.
+        try {
+          const data = await api.messages.getAll(chatId, 1);
+          const msg = (data.messages || []).find(m => String(m._id) === String(messageId));
+          if (!msg) return;
+          this._appendIncoming(chat, {
+            id:        msg._id,
+            _clientId: clientId || null,
+            sender:    msg.sender,
+            text:      msg.text,
+            files:     msg.files || [],
+            replyTo:   msg.replyTo || null,
+            reactions: msg.reactions || [],
+            time:      msg.createdAt,
+          }, sender);
+        } catch (err) {
+          console.warn('[fallback] failed to fetch message:', err.message);
         }
       });
 
@@ -1779,6 +1777,91 @@ export default {
         const chatData = await api.chats.getAll();
         this.chats = chatData.chats.map(this.mapChat);
       });
+    },
+    // P2P handler - prima poruke direktno od drugog browsera
+    _onP2PMessage(fromUsername, payload) {
+      if (!payload || !payload.kind) return;
+
+      if (payload.kind === 'message') {
+        // Full message preko WebRTC DataChannela
+        const chat = this.chats.find(c =>
+          (c.username && c.username === fromUsername) ||
+          (c.id === payload.chatId)
+        );
+        if (!chat) return;
+        chat.messages = chat.messages || [];
+
+        if (payload.clientId && chat.messages.some(m => m._clientId === payload.clientId)) return;
+
+        this._appendIncoming(chat, {
+          id:         payload.id || `p2p-${payload.clientId}`,
+          _clientId:  payload.clientId,
+          sender:     fromUsername,
+          text:       payload.text || '',
+          files:      payload.fileMeta || [], // popunjava se kad file-complete stigne
+          replyTo:    payload.replyTo || null,
+          reactions:  [],
+          time:       payload.time || new Date().toISOString(),
+          _pendingFiles: (payload.fileMeta || []).map(f => f.transferId),
+        }, fromUsername);
+        return;
+      }
+
+      if (payload.kind === 'file-complete') {
+        // Pripadajući blob - zalijepi u poruku koja ga čeka
+        const url = URL.createObjectURL(payload.blob);
+        for (const chat of this.chats) {
+          if (!chat.messages) continue;
+          for (const msg of chat.messages) {
+            if (!msg._pendingFiles) continue;
+            const idx = msg._pendingFiles.indexOf(payload.transferId);
+            if (idx === -1) continue;
+            // Dodaj/zamijeni file URL
+            const fileEntry = {
+              fileType: payload.meta.fileType || 'file',
+              url,
+              name: payload.meta.name || 'file',
+            };
+            msg.files = msg.files || [];
+            // ako je već placeholder po transferId, zamijeni; inače pushaj
+            const existing = msg.files.find(f => f._transferId === payload.transferId);
+            if (existing) {
+              existing.url = url;
+              existing.fileType = fileEntry.fileType;
+              existing.name = fileEntry.name;
+            } else {
+              msg.files.push({ ...fileEntry, _transferId: payload.transferId });
+            }
+            msg.media = msg.files.map(f => ({ fileType: f.fileType, url: f.url, name: f.name }));
+            msg._pendingFiles.splice(idx, 1);
+            return;
+          }
+        }
+      }
+    },
+    _appendIncoming(chat, msg, fromUsername) {
+      chat.messages.push(msg);
+      chat.lastMessage = msg.text || (msg.files?.length ? '📎 File' : '');
+
+      if (
+        fromUsername && fromUsername !== this.user.username &&
+        this.selectedChat?.id !== chat.id
+      ) {
+        chat.unread = true;
+      }
+
+      const isTabActive = !document.hidden && document.hasFocus();
+      if (
+        fromUsername && fromUsername !== this.user.username &&
+        this.settings.messageNotifications === 'on' &&
+        !isTabActive
+      ) {
+        this.notificationSound.currentTime = 0;
+        this.notificationSound.play().catch(() => {});
+      }
+      if (this.selectedChat?.id === chat.id) {
+        this.$nextTick(this.scrollToBottom);
+      }
     },
     async downloadFile(url, filename) {
       try {
@@ -1988,6 +2071,7 @@ export default {
         hidden:   false,
         blocked:  false,
         pinnedAt: null,
+        unread:   false,
       };
     },
     async updateProfile(field, value) {
@@ -2415,6 +2499,7 @@ export default {
     },
     async selectChat(chat) {
       chat.hidden = false;
+      chat.unread = false;
       this.selectedChat = chat;
       this.selectedChatForMenu = chat;
       this.globalSearch = "";
@@ -2424,6 +2509,13 @@ export default {
       this.contactInfoData = null;
       this.viewingOwnProfile = false;
       this.viewingSettings = false;
+
+      // Proaktivno otvori WebRTC DataChannel s recipientima ovog chata
+      // (za 1-on-1 chat to je chat.username; za grupu svi članovi osim mene)
+      const recipients = this._chatRecipients(chat);
+      for (const u of recipients) {
+        p2p.ensureConnection(u).catch(() => {});
+      }
 
       // Load messages from backend
       try {
@@ -2684,41 +2776,118 @@ export default {
     toggleTheme() {
       this.theme = this.theme === "light" ? "dark" : "light";
     },
+    _chatRecipients(chat) {
+      if (!chat) return [];
+      if (chat.isGroup && Array.isArray(chat.members)) {
+        return chat.members
+          .map(m => m.username || m)
+          .filter(u => u && u !== this.user.username);
+      }
+      if (chat.username && chat.username !== this.user.username) {
+        return [chat.username];
+      }
+      return [];
+    },
+    _genClientId() {
+      return 'cid-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+    },
     async sendMessage() {
       if (!this.selectedChat || this.selectedChat.blocked) return;
       if (!this.newMessage.trim() && !this.pendingMedia.length) return;
 
       const text = this.newMessage.replace(/\n+/g, ' ').trim();
+      const clientId = this._genClientId();
+      const replyTo = this.replyingTo || null;
+      const pending = this.pendingMedia.slice();
+      const recipients = this._chatRecipients(this.selectedChat);
 
+      // lokalno dodaj poruku odmah
+      const optimistic = {
+        id: clientId,
+        _clientId: clientId,
+        sender: 'me',
+        text,
+        files: pending.map(f => ({
+          fileType: f.fileType || (f.blob?.type?.startsWith('video') ? 'video'
+                      : f.blob?.type?.startsWith('image') ? 'image' : 'file'),
+          url:      f.url || (f.blob ? URL.createObjectURL(f.blob) : ''),
+          name:     f.name,
+        })),
+        replyTo,
+        reactions: [],
+        time:      new Date().toISOString(),
+      };
+      optimistic.media = optimistic.files.map(f => ({ fileType: f.fileType, url: f.url, name: f.name }));
+      this.selectedChat.messages = this.selectedChat.messages || [];
+      this.selectedChat.messages.push(optimistic);
+      this.selectedChat.lastMessage = text || (pending.length ? '📎 File' : '');
+
+      // resetiraj input prije async dijela
+      this.newMessage   = '';
+      this.replyingTo   = null;
+      this.pendingMedia = [];
+      this.$nextTick(this.scrollToBottom);
+
+      // Pošalji P2P paralelno sa serverom
+      // Za svakog recipienta otvori DataChannel i pošalji JSON + file chunks.
+      const fileMeta = pending.map((f, i) => ({
+        transferId: `${clientId}-f${i}`,
+        name:       f.name,
+        type:       f.blob?.type || '',
+        fileType:   f.fileType || (f.blob?.type?.startsWith('video') ? 'video'
+                      : f.blob?.type?.startsWith('image') ? 'image' : 'file'),
+        size:       f.blob?.size || 0,
+      }));
+      const p2pPayload = {
+        kind: 'message',
+        chatId: this.selectedChat.id,
+        clientId,
+        text,
+        replyTo,
+        fileMeta,
+        time: optimistic.time,
+      };
+      (async () => {
+        for (const u of recipients) {
+          try {
+            await p2p.ensureConnection(u);
+            // mali wait dok DC ne postane open (do 1.5s)
+            for (let i = 0; i < 15 && !p2p.isOpen(u); i++) {
+              await new Promise(r => setTimeout(r, 100));
+            }
+            if (!p2p.isOpen(u)) continue;  // peer offline - server fallback će dostaviti hint
+            p2p.sendJSON(u, p2pPayload);
+            for (let i = 0; i < pending.length; i++) {
+              const f = pending[i];
+              if (!f.blob) continue;
+              await p2p.sendFile(u, fileMeta[i].transferId, f.blob, fileMeta[i]);
+            }
+          } catch (e) {
+            console.warn('[p2p] send failed to', u, e.message || e);
+          }
+        }
+      })();
+
+      // POST na server (Cloudinary + Mongo)
       try {
         const data = await api.messages.send(this.selectedChat.id, {
           text,
-          replyTo: this.replyingTo || null,
-          files:   this.pendingMedia, // pass the full objects including blob
+          replyTo,
+          files: pending,
+          clientId,
         });
-
         const msg = data.message;
-        this.selectedChat.messages.push({
-          id:        msg._id,
-          sender:    'me',
-          text:      msg.text,
-          files:     msg.files || [],
-          media:     (msg.files || []).map(f => ({
-            fileType: f.fileType,
-            url:      f.url,
-            name:     f.name,
-          })),
-          replyTo:   msg.replyTo || null,
-          reactions: msg.reactions || [],
-          time:      msg.createdAt,
-        });
-
-        this.selectedChat.lastMessage = text || (this.pendingMedia.length ? '📎 File' : '');
-        this.newMessage   = '';
-        this.replyingTo   = null;
-        this.pendingMedia = [];
-        this.$nextTick(this.scrollToBottom);
-
+        // Zamijeni placeholder sa stvarnim ID-om i Cloudinary URL-ovima
+        const idx = this.selectedChat.messages.findIndex(m => m._clientId === clientId);
+        if (idx !== -1) {
+          this.selectedChat.messages[idx] = {
+            ...this.selectedChat.messages[idx],
+            id:    msg._id,
+            files: msg.files || [],
+            media: (msg.files || []).map(f => ({ fileType: f.fileType, url: f.url, name: f.name })),
+            time:  msg.createdAt,
+          };
+        }
       } catch (err) {
         console.error('Failed to send message:', err.message);
       }
@@ -3159,6 +3328,15 @@ export default {
 
 .dark .contact-item .text-muted {
   color: white !important;
+}
+
+/* Unread chat — bold preview + name dok ga ne otvoriš */
+.contact-item.unread .fw-semibold {
+  font-weight: 800;
+}
+.contact-item.unread .text-muted {
+  font-weight: 700;
+  opacity: 1;
 }
 
 .dark .chat-header .text-muted {

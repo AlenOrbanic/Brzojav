@@ -121,12 +121,13 @@ export const messages = {
   },
 
   // Send message
-  async send(chatId, { text = '', replyTo = null, files = [] } = {}) {
+  async send(chatId, { text = '', replyTo = null, files = [], clientId = null } = {}) {
     const token = getToken();
     const form  = new FormData();
 
     form.append('text', text);
     if (replyTo) form.append('replyTo', JSON.stringify(replyTo));
+    if (clientId) form.append('clientId', clientId);
 
     for (const f of files) {
       if (f.blob) form.append('files', f.blob, f.name);
