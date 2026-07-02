@@ -285,7 +285,7 @@
                     </span>
                   </div>
                   <small class="text-muted d-block text-truncate">
-                    {{ chat.lastMessage }}
+                    {{ previewText(chat) }}
                   </small>
                 </div>
               </div>
@@ -847,8 +847,12 @@
             </div>
           </div>
           <div v-if="pinnedMessage" class="pinned-bar" @click="scrollToPinned">
-            📌 <span class="pinned-text">{{ pinnedMessage.text }}</span>
-            <button class="unpin-btn" @click.stop="pinnedMessage = null">
+            <span class="pinned-icon-emoji">📌</span>
+            <div class="pinned-bar-body">
+              <span v-if="pinnedByName" class="pinned-by">Pinned by {{ pinnedByName }}</span>
+              <span class="pinned-text">{{ pinnedMessage.text }}</span>
+            </div>
+            <button class="unpin-btn" @click.stop="unpinMessage">
               ✕
             </button>
           </div>
@@ -862,7 +866,10 @@
             v-for="(msg, index) in visibleMessages"
             :key="index"
             class="mb-2"
-            :class="msg.sender === 'system' ? 'text-center w-100' : (msg.sender === 'me' ? 'text-end' : 'text-start')"
+            :class="[
+              msg.sender === 'system' ? 'text-center w-100' : (msg.sender === 'me' ? 'text-end' : 'text-start'),
+              pinFlashIndex === index ? 'pin-flash' : ''
+            ]"
           >
               <span
                 v-if="msg.sender === 'system'"
@@ -1383,6 +1390,7 @@ export default {
       this.settings.allowStrangers = userData.user.allowStrangers ? 'on' : 'off';
       this.settings.messageNotifications = userData.user.notificationsEnabled ? 'on' : 'off';
       this.theme = userData.user.theme === 'dark' ? 'dark' : 'light';
+      this.blockedUsernames = userData.user.blockedUsers || [];
 
       const chatData = await api.chats.getAll();
       this.chats = chatData.chats.map(this.mapChat);
@@ -1449,6 +1457,7 @@ export default {
       selectedChat: null,
       hoveredMessage: null,
       pinnedMessage: null,
+      pinFlashIndex: null,
       pendingReactMessage: null,
       replyingTo: null,
       showMediaLimitToast: false,
@@ -1552,6 +1561,18 @@ export default {
     isContactBlocked() {
       if (!this.contactInfoData || this.contactInfoData.isGroup) return false;
       return this.isUserBlocked(this.contactInfoData.username);
+    },
+    pinnedByName() {
+      const by = this.pinnedMessage?.pinnedBy;
+      if (!by) return '';
+      if (by === this.user.username) return 'You';
+      const chat = this.selectedChat;
+      if (chat?.isGroup && Array.isArray(chat.members)) {
+        const m = chat.members.find(x => (x.username || x) === by);
+        if (m) return m.deleted ? 'Deleted user' : (m.name || m.username);
+      }
+      if (chat && !chat.isGroup && chat.username === by) return chat.name;
+      return by;
     },
     visibleMessages() {
       const msgs = this.selectedChat?.messages || [];
@@ -1679,6 +1700,50 @@ export default {
       // DM
       return this.selectedChat.deleted ? 'Deleted user' : (this.selectedChat.name || 'Unknown');
     },
+
+    // Sidebar preview tekst. Za grupe prefiksira ime pošiljatelja ("John: hello",
+    // "You: hello"). Za DM samo tekst. Blokirani useri su već filtrirani sa servera.
+    previewText(chat) {
+      const text = chat.lastMessage || '';
+      if (!chat.isGroup || !text) return text;
+      const sender = chat.lastMessageSender;
+      if (!sender) return text;
+      let name;
+      if (sender === this.user.username) {
+        name = 'You';
+      } else {
+        const m = Array.isArray(chat.members)
+          ? chat.members.find(x => (x.username || x) === sender)
+          : null;
+        name = m ? (m.deleted ? 'Deleted user' : (m.name || m.username)) : sender;
+      }
+      return `${name}: ${text}`;
+    },
+
+    // Povuci svježe chatove sa servera i mergeaj u postojeće (čuva učitane
+    // poruke, selekciju i pin). Koristi se za live sidebar update.
+    async refreshChats() {
+      try {
+        const data = await api.chats.getAll();
+        const fresh = data.chats.map(this.mapChat);
+        const oldById = new Map(this.chats.map(c => [c.id, c]));
+        for (const nc of fresh) {
+          const old = oldById.get(nc.id);
+          if (old) {
+            nc.messages = old.messages || [];
+            nc.hidden   = old.hidden;
+            nc.unread   = nc.unread || old.unread;
+          }
+        }
+        this.chats = fresh;
+        if (this.selectedChat) {
+          const sel = this.chats.find(c => c.id === this.selectedChat.id);
+          if (sel) this.selectedChat = sel;
+        }
+      } catch (err) {
+        console.warn('[refreshChats] failed:', err.message);
+      }
+    },
     async confirmDeleteAccount() {
       try {
         await api.users.deleteMe();
@@ -1734,8 +1799,14 @@ export default {
       // Ako smo poruku već dobili preko P2P (clientId match), ignoriraj.
       // Inače je peer bio offline / DataChannel nije otvoren - povuci je sa servera.
       this.socket.on('new_message', async ({ chatId, messageId, clientId, sender }) => {
-        const chat = this.chats.find(c => c.id === chatId);
-        if (!chat) return;
+        let chat = this.chats.find(c => c.id === chatId);
+        // Chat još nije u listi (npr. tek kreirana grupa, race s chat_added) —
+        // povuci svježu listu chatova pa probaj ponovno.
+        if (!chat) {
+          await this.refreshChats();
+          chat = this.chats.find(c => c.id === chatId);
+          if (!chat) return;
+        }
         chat.messages = chat.messages || [];
 
         // Dedupe — provjeri jesmo li već primili preko P2P
@@ -1767,15 +1838,32 @@ export default {
       });
 
       // Sidebar refresh kada se metadata promjeni
-      this.socket.on('chat_updated', ({ chatId, lastMessage }) => {
+      this.socket.on('chat_updated', ({ chatId, lastMessage, lastMessageSender }) => {
         const chat = this.chats.find(c => c.id === chatId);
-        if (chat) chat.lastMessage = lastMessage;
+        if (!chat) return;
+        // Ne prikazuj poruku blokiranog usera u previewu
+        if (lastMessageSender && this.isUserBlocked(lastMessageSender)) return;
+        chat.lastMessage = lastMessage;
+        if (lastMessageSender !== undefined) chat.lastMessageSender = lastMessageSender;
       });
 
       // Netko je napravio novi chat
       this.socket.on('chat_added', async () => {
-        const chatData = await api.chats.getAll();
-        this.chats = chatData.chats.map(this.mapChat);
+        await this.refreshChats();
+      });
+
+      // Dijeljeni pin poruke se promijenio
+      this.socket.on('chat_pinned', ({ chatId, messageId, text, sender, by }) => {
+        const chat = this.chats.find(c => c.id === chatId);
+        if (!chat) return;
+        const snapshot = messageId
+          ? { id: messageId, text: text || '', sender: sender || '', pinnedBy: by || '' }
+          : null;
+        chat.pinnedMessageId = messageId || null;
+        chat.pinnedMessage = snapshot;
+        if (this.selectedChat?.id === chatId) {
+          this.pinnedMessage = snapshot;
+        }
       });
 
       this.socket.on('reactions_updated', async ({ chatId, messageId }) => {
@@ -1880,24 +1968,33 @@ export default {
     },
     _appendIncoming(chat, msg, fromUsername) {
       chat.messages.push(msg);
-      chat.lastMessage = msg.text || (msg.files?.length ? '📎 File' : '');
 
-      if (
-        fromUsername && fromUsername !== this.user.username &&
-        this.selectedChat?.id !== chat.id
-      ) {
-        chat.unread = true;
+      const senderU = fromUsername || msg.sender;
+      const senderBlocked = senderU && this.isUserBlocked(senderU);
+
+      // Ne diraj preview / unread / zvuk ako je pošiljatelj blokiran
+      if (!senderBlocked) {
+        chat.lastMessage = msg.text || (msg.files?.length ? '📎 File' : '');
+        chat.lastMessageSender = senderU || chat.lastMessageSender;
+
+        if (
+          fromUsername && fromUsername !== this.user.username &&
+          this.selectedChat?.id !== chat.id
+        ) {
+          chat.unread = true;
+        }
+
+        const isTabActive = !document.hidden && document.hasFocus();
+        if (
+          fromUsername && fromUsername !== this.user.username &&
+          this.settings.messageNotifications === 'on' &&
+          !isTabActive
+        ) {
+          this.notificationSound.currentTime = 0;
+          this.notificationSound.play().catch(() => {});
+        }
       }
 
-      const isTabActive = !document.hidden && document.hasFocus();
-      if (
-        fromUsername && fromUsername !== this.user.username &&
-        this.settings.messageNotifications === 'on' &&
-        !isTabActive
-      ) {
-        this.notificationSound.currentTime = 0;
-        this.notificationSound.play().catch(() => {});
-      }
       if (this.selectedChat?.id === chat.id) {
         this.$nextTick(this.scrollToBottom);
       }
@@ -1933,16 +2030,24 @@ export default {
       });
     },
 
-    lightboxPin() {
+    async lightboxPin() {
       const msg = this.lightbox.media?.msgRef;
-      if (!msg) return;
-      if (this.pinnedMessage === msg) {
-        this.pinnedMessage = null;
-      } else {
-        if (!msg.text) msg.text = '🖼️ Image';
-        this.pinnedMessage = msg;
-      }
+      if (!msg || !this.selectedChat) return;
       this.closeLightbox();
+      await this._togglePin(msg);
+    },
+
+    async unpinMessage() {
+      const chat = this.selectedChat;
+      this.pinnedMessage = null;
+      if (!chat) return;
+      chat.pinnedMessage = null;
+      chat.pinnedMessageId = null;
+      try {
+        await api.chats.pinMessage(chat.id, null);
+      } catch (err) {
+        console.error('Failed to unpin message:', err.message);
+      }
     },
 
     lightboxReply() {
@@ -1976,9 +2081,9 @@ export default {
       if (!chat) return;
       chat.blocked = false;
       this.blockedUsernames = this.blockedUsernames.filter(u => u !== chat.username);
-      api.users.blockUser(chat.username, false).catch(err =>
-        console.error('Failed to unblock user:', err.message)
-      );
+      api.users.blockUser(chat.username, false)
+        .then(() => this.refreshChats())
+        .catch(err => console.error('Failed to unblock user:', err.message));
     },
 
     unblockContact() {
@@ -1989,33 +2094,34 @@ export default {
         this.unblockChat(chat);
       } else {
         this.blockedUsernames = this.blockedUsernames.filter(u => u !== username);
-        api.users.blockUser(username, false).catch(err =>
-          console.error('Failed to unblock user:', err.message)
-        );
+        api.users.blockUser(username, false)
+          .then(() => this.refreshChats())
+          .catch(err => console.error('Failed to unblock user:', err.message));
       }
     },
     isUserBlocked(username) {
       return this.blockedUsernames.includes(username);
     },
 
-    blockMember(member) {
+    async blockMember(member) {
       const wasBlocked = this.isUserBlocked(member.username);
-
       const chat = this.chats.find(
         c => !c.isGroup && c.username === member.username
       );
-      if (chat) {
-        this.blockUser(chat);
-      } else {
-        api.users.blockUser(member.username, !wasBlocked).catch(err =>
-          console.error('Failed to block user:', err.message)
-        );
-      }
 
+      // Ažuriraj lokalno stanje jednom
       if (wasBlocked) {
         this.blockedUsernames = this.blockedUsernames.filter(u => u !== member.username);
       } else {
         this.blockedUsernames.push(member.username);
+      }
+      if (chat) chat.blocked = !wasBlocked;
+
+      try {
+        await api.users.blockUser(member.username, !wasBlocked);
+        await this.refreshChats();
+      } catch (err) {
+        console.error('Failed to block user:', err.message);
       }
 
       this.closeMemberMenu();
@@ -2111,8 +2217,11 @@ export default {
         pinned:   chat.pinned  || false,
         muted:    chat.muted   || false,
         hidden:   false,
-        blocked:  false,
+        blocked:  !chat.isGroup && this.blockedUsernames.includes(chat.otherUser?.username),
         pinnedAt: null,
+        lastMessageSender: chat.lastMessageSender || '',
+        pinnedMessageId:   chat.pinnedMessageId || null,
+        pinnedMessage:     chat.pinnedMessage || null,
         unread:   initialUnread,
         lastReadAt: chat.lastReadAt || null,
       };
@@ -2454,8 +2563,12 @@ export default {
     },
     scrollToPinned() {
       if (!this.pinnedMessage || !this.selectedChat) return;
-      const index = this.selectedChat.messages.indexOf(this.pinnedMessage);
+      const index = this.visibleMessages.findIndex(
+        m => String(m.id) === String(this.pinnedMessage.id)
+      );
       if (index === -1) return;
+      this.pinFlashIndex = index;
+      setTimeout(() => { this.pinFlashIndex = null; }, 1600);
       this.$nextTick(() => {
         const el = this.$refs.messagesBox?.children[index];
         if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -2589,6 +2702,9 @@ export default {
         console.error('Failed to load messages:', err.message);
         chat.messages = [];
       }
+
+      // Postavi dijeljenu pinanu poruku za ovaj chat
+      this.pinnedMessage = chat.pinnedMessage || null;
 
       this.$nextTick(this.scrollToBottom);
     },
@@ -2748,6 +2864,7 @@ export default {
       if (newBlocked && this.selectedChat?.id === chat.id) this.newMessage = '';
       try {
         await api.users.blockUser(chat.username, newBlocked);
+        await this.refreshChats();
       } catch (err) {
         console.error('Failed to block user:', err.message);
         chat.blocked = !newBlocked;
@@ -2869,6 +2986,7 @@ export default {
       this.selectedChat.messages = this.selectedChat.messages || [];
       this.selectedChat.messages.push(optimistic);
       this.selectedChat.lastMessage = text || (pending.length ? '📎 File' : '');
+      this.selectedChat.lastMessageSender = this.user.username;
 
       // resetiraj input prije async dijela
       this.newMessage   = '';
@@ -3073,14 +3191,36 @@ export default {
         if (p2p.isOpen(u)) p2p.sendJSON(u, payload);
       }
     },
-    pinMessage() {
-      if (!this.messageMenu.message) return;
-      if (this.pinnedMessage === this.messageMenu.message) {
-        this.pinnedMessage = null;
-      } else {
-        this.pinnedMessage = this.messageMenu.message;
-      }
+    async pinMessage() {
+      const msg = this.messageMenu.message;
+      if (!msg || !this.selectedChat) return;
       this.closeMessageMenu();
+      await this._togglePin(msg);
+    },
+
+    // Zajednička logika za pin/unpin poruke (menu + lightbox)
+    async _togglePin(msg) {
+      const chat = this.selectedChat;
+      if (!chat || !msg) return;
+      const isPinned = this.pinnedMessage && String(this.pinnedMessage.id) === String(msg.id);
+      const newId = isPinned ? null : msg.id;
+      const snapshot = isPinned ? null : {
+        id:       msg.id,
+        text:     msg.text || (msg.files?.length ? '📎 File' : ''),
+        sender:   msg.sender === 'me' ? this.user.username : msg.sender,
+        pinnedBy: this.user.username,
+      };
+
+      // Optimistic
+      this.pinnedMessage    = snapshot;
+      chat.pinnedMessage    = snapshot;
+      chat.pinnedMessageId  = newId;
+
+      try {
+        await api.chats.pinMessage(chat.id, newId);
+      } catch (err) {
+        console.error('Failed to pin message:', err.message);
+      }
     },
     async deleteMessage() {
       if (!this.messageMenu.message || !this.selectedChat) return;
@@ -4040,7 +4180,7 @@ export default {
   flex-shrink: 0;
   overflow: hidden;
   min-width: 0;
-  max-height: 36px;
+  max-height: 54px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -4088,6 +4228,42 @@ export default {
 
 .unpin-btn:hover {
   opacity: 1;
+}
+
+.pinned-icon-emoji {
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.pinned-bar-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
+}
+
+.pinned-by {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgb(247, 0, 255);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Flash-highlight kad se klikne na pinanu poruku */
+.pin-flash .message,
+.pin-flash .message-bubble-wrap {
+  animation: pin-flash-anim 1.4s ease-out;
+}
+
+@keyframes pin-flash-anim {
+  0%   { box-shadow: 0 0 0 0 rgba(247, 0, 255, 0.0); }
+  15%  { box-shadow: 0 0 0 3px rgba(247, 0, 255, 0.9); }
+  60%  { box-shadow: 0 0 0 3px rgba(247, 0, 255, 0.55); }
+  100% { box-shadow: 0 0 0 0 rgba(247, 0, 255, 0.0); }
 }
 
 .message-bubble-wrap {

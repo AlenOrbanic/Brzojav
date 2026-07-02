@@ -113,6 +113,14 @@ export const chats = {
   async markRead(chatId) {
     return request(`/api/chats/${chatId}/read`, { method: 'POST' });
   },
+
+  // Pinaj/odpinaj poruku u chatu (messageId = null za unpin)
+  async pinMessage(chatId, messageId) {
+    return request(`/api/chats/${chatId}/pin-message`, {
+      method: 'POST',
+      body: JSON.stringify({ messageId: messageId || null }),
+    });
+  },
 };
 
 // Messages
