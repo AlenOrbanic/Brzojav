@@ -56,6 +56,12 @@ export const auth = {
       body: JSON.stringify({ username, email, password, phone }),
     });
   },
+  async google(credential) {
+    return request('/api/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ credential }),
+    });
+  },
 };
 
 export const chats = {

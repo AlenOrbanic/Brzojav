@@ -9,7 +9,7 @@
       forgotMode: isForgotPassword
     }">
       <form @submit.prevent="handleSubmit">
-        <transition name="fade-slide" mode="out-in">
+        <transition name="fade-slide" mode="out-in" @after-enter="renderGoogleButton">
           <div :key="isForgotPassword ? 'forgot' : isRegister ? 'register' : 'login'" class="form-content">
             <h2>
               {{ isForgotPassword ? "Forgot Password?" : isRegister ? "Welcome Chatter!" : "Brzojav Login" }}
@@ -71,10 +71,11 @@
                 </label>
                 <a href="#" @click.prevent="openForgotPassword">Forgot password?</a>
               </div>
-              <div class="button-wrapper">
-                <button type="submit" :disabled="loading">
+              <div class="button-wrapper auth-buttons">
+                <button type="submit" :disabled="loading" data-testid="auth-submit-button">
                   {{ loading ? "Please wait..." : isRegister ? "Register" : "Log In" }}
                 </button>
+                <div ref="googleBtn" class="google-btn" data-testid="google-signin-button"></div>
               </div>
               <div class="register">
                 <span>{{ isRegister ? "Already have an account? " : "Don't have an account? " }}</span>
@@ -91,7 +92,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted, watch, nextTick } from "vue";
 import { useRouter } from "vue-router";
 import api from '@/api';
 
@@ -108,6 +109,49 @@ const registerPassword = ref("");
 const rememberMe = ref(false);
 const errorMessage = ref("");
 const loading = ref(false);
+const googleBtn = ref(null);
+const GOOGLE_CLIENT_ID = process.env.VUE_APP_GOOGLE_CLIENT_ID;
+
+function renderGoogleButton() {
+  if (!window.google || !googleBtn.value) return;
+  window.google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback:  handleGoogleCredential,
+  });
+  googleBtn.value.innerHTML = "";
+  window.google.accounts.id.renderButton(googleBtn.value, {
+    theme: "outline",
+    size:  "large",
+    type:  "standard",
+    text:  "continue_with",
+    shape: "pill",
+  });
+}
+
+async function handleGoogleCredential(response) {
+  errorMessage.value = "";
+  try {
+    const data = await api.auth.google(response.credential);
+    saveSession(data.token, data.user);
+    router.replace("/");
+  } catch (err) {
+    errorMessage.value = err.message;
+  }
+}
+
+onMounted(() => {
+  const timer = setInterval(() => {
+    if (window.google) {
+      clearInterval(timer);
+      renderGoogleButton();
+    }
+  }, 100);
+});
+
+watch([isRegister, isForgotPassword], async () => {
+  await nextTick();
+  renderGoogleButton();
+});
 
 function toggleRegister() {
   isRegister.value = !isRegister.value;
@@ -373,5 +417,20 @@ a:hover {
   padding: 8px 12px;
   font-size: 0.9rem;
   text-align: center;
+}
+.button-wrapper.auth-buttons {
+  justify-content: center;   /* bilo: flex-start */
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.button-wrapper.auth-buttons button {
+  width: auto;
+  min-width: 120px;
+  padding: 0 22px;
+}
+.google-btn {
+  display: flex;
+  align-items: center;
 }
 </style>
