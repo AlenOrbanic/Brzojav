@@ -958,7 +958,7 @@
                     <div class="reply-quote-text">{{ msg.replyTo.text }}</div>
                   </div>
                   <div
-                    v-if="msg.files && msg.files.length"
+                    v-if="msg.media && msg.media.length"
                     class="msg-media-wrap"
                   >
                     <div
@@ -1828,6 +1828,7 @@ export default {
             sender:    msg.sender,
             text:      msg.text,
             files:     msg.files || [],
+            media:     (msg.files || []).map(f => ({ fileType: f.fileType, url: f.url, name: f.name })),
             replyTo:   msg.replyTo || null,
             reactions: msg.reactions || [],
             time:      msg.createdAt,
@@ -1893,6 +1894,7 @@ export default {
       if (!payload || !payload.kind) return;
 
       if (payload.kind === 'message') {
+        if (payload.fileMeta && payload.fileMeta.length) return;
         // Full message preko WebRTC DataChannela
         const chat = this.chats.find(c =>
           (c.username && c.username === fromUsername) ||
