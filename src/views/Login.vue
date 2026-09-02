@@ -139,7 +139,10 @@ async function handleGoogleCredential(response) {
   }
 }
 
+const warming = ref(false);
+
 onMounted(() => {
+  api.health.ping(); // fire-and-forget warm-up
   const timer = setInterval(() => {
     if (window.google) {
       clearInterval(timer);

@@ -229,5 +229,13 @@ export const links = {
     return request(`/api/links/preview?url=${encoded}`);
   },
 };
+export const health = {
+  async ping() {
+    try {
+      const res = await fetch(`${BASE_URL}/health`, { method: 'GET' });
+      return res.ok;
+    } catch { return false; }
+  },
+};
 export { getToken, getUser };
-export default { auth, chats, messages, users, links, getToken, getUser };
+export default { auth, chats, messages, users, links, health, getToken, getUser };

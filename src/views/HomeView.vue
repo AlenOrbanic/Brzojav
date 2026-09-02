@@ -1787,6 +1787,9 @@ export default {
       const BASE_URL = process.env.VUE_APP_API_URL || 'http://localhost:3001';
       this.socket = io(BASE_URL, {
         auth: { token: api.getToken() },
+        transports: ['websocket'],
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
       });
 
       // signaling preko Socket.IO konekcije
