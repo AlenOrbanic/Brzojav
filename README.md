@@ -1,52 +1,85 @@
+<div align="center">
+
+### Sveučilište Jurja Dobrile u Puli
+### Fakultet informatike
+
+<br><br>
+
+## ALEN ORBANIĆ
+
+## Razvoj web-aplikacije za razmjenu poruka u stvarnom vremenu primjenom hibridne P2P arhitekture
+
+### Završni rad
+
+<br><br>
+
+| | |
+|---|---|
+| **JMBAG:** | 0303094982 |
+| **Studijski smjer:** | preddiplomski studij informatike |
+| **Kolegij:** | Raspodijeljeni sustavi |
+| **Znanstveno područje:** | Društvene znanosti |
+| **Znanstveno polje:** | Informacijske znanosti |
+| **Znanstvena grana:** | Informacijski sustavi i informatologija |
+| **Mentor:** | izv. prof. dr. sc. Nikola Tanković |
+
+<br><br>
+
+**Pula, rujan 2026.**
+
+</div>
+
+---
+
 # Brzojav
 
-Brzojav is a real-time web messaging application that allows users to exchange text messages and multimedia content. The frontend is implemented as a Single Page Application (SPA) using Vue.js and communicates with the Brzojav backend through a REST API and Socket.IO.
+Brzojav je web-aplikacija za razmjenu poruka u stvarnom vremenu koja korisnicima omogućuje razmjenu tekstualnih poruka i multimedijalnog sadržaja. Frontend je implementiran kao jednostranična aplikacija (Single Page Application, SPA) korištenjem Vue.js-a i komunicira s Brzojav backendom putem REST API-ja i Socket.IO-a.
 
-The application also supports direct peer-to-peer communication between users using WebRTC DataChannels. Socket.IO is used for real-time notifications and WebRTC signaling, while the backend is used for persistent data storage and as a fallback when a direct peer-to-peer connection cannot be established.
+Aplikacija također podržava izravnu peer-to-peer komunikaciju između korisnika korištenjem WebRTC DataChannel-a. Socket.IO se koristi za obavijesti u stvarnom vremenu i WebRTC signalizaciju, dok se backend koristi za trajnu pohranu podataka i kao zamjensko rješenje kada izravna peer-to-peer veza nije moguća.
 
-## Live Application
+## Aplikacija uživo
 
 [Brzojav](https://brzojav.vercel.app/)
 
 ## Backend
 
-The backend repository is available here:
+Repozitorij backenda dostupan je ovdje:
 
 [Brzojav Backend](https://github.com/AlenOrbanic/Brzojav-backend)
 
-## Technologies
+## Tehnologije
 
 - **Vue.js 3** – frontend framework
-- **Vue Router** – client-side routing
-- **Socket.IO Client** – real-time communication and WebRTC signaling
-- **WebRTC** – direct peer-to-peer communication
-- **Sass** – stylesheet preprocessing
-- **Vue CLI** – development and production tooling
+- **Vue Router** – usmjeravanje na strani klijenta (client-side routing)
+- **Socket.IO Client** – komunikacija u stvarnom vremenu i WebRTC signalizacija
+- **WebRTC** – izravna peer-to-peer komunikacija
+- **Sass** – predprocesiranje stilskih datoteka
+- **Vue CLI** – alati za razvoj i izradu produkcijske verzije
 
-## Features
+## Značajke
 
-- User registration and login
-- Google authentication
-- One-to-one conversations
-- Group conversations
-- Real-time messaging
-- Direct peer-to-peer messaging using WebRTC
-- Direct peer-to-peer file transfers
-- Sending images, videos, and other files
-- Message replies
-- Message deletion
-- Message reactions
-- Pinned messages
-- User profiles
-- Profile customization
-- User blocking
-- Last-seen status
-- Notifications
-- Theme selection
-- Link previews
-- Automatic fallback to the backend when a peer-to-peer connection is unavailable
+- Registracija i prijava korisnika
+- Google autentikacija
+- Razgovori jedan na jedan
+- Grupni razgovori
+- Razmjena poruka u stvarnom vremenu
+- Izravno peer-to-peer slanje poruka putem WebRTC-a
+- Izravan peer-to-peer prijenos datoteka
+- Slanje slika, videozapisa i ostalih datoteka
+- Odgovaranje na poruke
+- Brisanje poruka
+- Reakcije na poruke
+- Pribadanje (pinanje) poruka
+- Korisnički profili
+- Prilagodba profila
+- Blokiranje korisnika
+- Status posljednje aktivnosti (last-seen)
+- Obavijesti
+- Odabir teme
+- Pregledi poveznica (link previews)
+- Automatski prelazak na backend kada peer-to-peer veza nije dostupna
 
-## Project Structure
+## Struktura projekta
 
 ```text
 Brzojav/
@@ -73,50 +106,50 @@ Brzojav/
 └── README.md
 ```
 
-The frontend separates API communication, WebRTC functionality, reusable components, routing, and application views into separate modules.
+Frontend odvaja API komunikaciju, WebRTC funkcionalnost, komponente za ponovnu upotrebu, usmjeravanje i poglede aplikacije u zasebne module.
 
-## Installation
+## Instalacija
 
-### Prerequisites
+### Preduvjeti
 
-Make sure the following are installed:
+Provjerite je li sljedeće instalirano:
 
 - [Node.js](https://nodejs.org/)
 - npm
-- A running instance of the Brzojav backend
+- pokrenuta instanca Brzojav backenda
 
-### Clone the repository
+### Kloniranje repozitorija
 
 ```bash
 git clone https://github.com/AlenOrbanic/Brzojav.git
 cd Brzojav
 ```
 
-### Install dependencies
+### Instalacija ovisnosti
 
 ```bash
 npm install
 ```
 
-## Configuration
+## Konfiguracija
 
-The frontend uses the `VUE_APP_API_URL` environment variable to specify the backend URL.
+Frontend koristi varijablu okoline `VUE_APP_API_URL` za određivanje URL-a backenda.
 
-Create a `.env` file in the project root:
+Kreirajte `.env` datoteku u korijenu projekta:
 
 ```env
 VUE_APP_API_URL=http://localhost:3001
 ```
 
-If the variable is not provided, the application defaults to:
+Ako varijabla nije zadana, aplikacija se po zadanome koristi:
 
 ```text
 http://localhost:3001
 ```
 
-The API client uses this address for REST requests.
+API klijent koristi ovu adresu za REST zahtjeve.
 
-The frontend's seed-node client currently uses three seed nodes:
+Frontendov seed-node klijent trenutno koristi tri seed čvora:
 
 ```text
 http://localhost:3001
@@ -124,121 +157,121 @@ http://localhost:3002
 http://localhost:3003
 ```
 
-These nodes are used to register users, maintain their online status, and look up other users for peer-to-peer connections.
+Ovi čvorovi koriste se za registraciju korisnika, održavanje njihovog online statusa te pronalaženje drugih korisnika za peer-to-peer veze.
 
-## Running the Application
+## Pokretanje aplikacije
 
-### Development
+### Razvojno okruženje
 
-Start the development server with:
+Pokrenite razvojni server pomoću:
 
 ```bash
 npm run serve
 ```
 
-The application will normally be available at:
+Aplikacija će uobičajeno biti dostupna na:
 
 ```text
 http://localhost:8080
 ```
 
-### Production Build
+### Produkcijska izrada
 
-To create a production build:
+Za kreiranje produkcijske verzije:
 
 ```bash
 npm run build
 ```
 
-The generated production files can then be deployed to a static web hosting service.
+Generirane produkcijske datoteke mogu se zatim postaviti na statički web hosting servis.
 
-## Communication Architecture
+## Arhitektura komunikacije
 
-Brzojav uses a hybrid communication model.
+Brzojav koristi hibridni komunikacijski model.
 
 ### REST API
 
-The frontend uses the backend REST API for operations such as:
+Frontend koristi backend REST API za operacije poput:
 
-- authentication
-- user profiles
-- chat management
-- retrieving message history
-- storing messages
-- file uploads
-- reactions
-- message deletion
-- user management
-- link previews
+- autentikacije
+- korisničkih profila
+- upravljanja razgovorima (chatovima)
+- dohvaćanja povijesti poruka
+- pohrane poruka
+- prijenosa datoteka
+- reakcija
+- brisanja poruka
+- upravljanja korisnicima
+- pregleda poveznica
 
-The API client automatically includes the JWT access token in authenticated requests.
+API klijent automatski uključuje JWT pristupni token u autenticirane zahtjeve.
 
 ### Socket.IO
 
-Socket.IO provides real-time communication between the frontend and backend.
+Socket.IO omogućuje komunikaciju u stvarnom vremenu između frontenda i backenda.
 
-It is primarily used for:
+Prvenstveno se koristi za:
 
-- WebRTC signaling
-- notifying users about new messages
-- updating chat previews
-- notifying clients about changes to messages and chats
+- WebRTC signalizaciju
+- obavještavanje korisnika o novim porukama
+- ažuriranje pregleda razgovora
+- obavještavanje klijenata o promjenama poruka i razgovora
 
-The server does not use Socket.IO as the primary transport for the contents of peer-to-peer messages. Instead, it forwards the signaling information required to establish WebRTC connections.
+Server ne koristi Socket.IO kao primarni transport za sadržaj peer-to-peer poruka. Umjesto toga, prosljeđuje signalizacijske informacije potrebne za uspostavu WebRTC veza.
 
 ### WebRTC
 
-When two users are online and a direct connection can be established, Brzojav creates a WebRTC `RTCPeerConnection` between their browsers.
+Kada su dva korisnika online i izravna veza se može uspostaviti, Brzojav između njihovih preglednika kreira WebRTC `RTCPeerConnection`.
 
-A WebRTC `RTCDataChannel` is then used to transfer:
+WebRTC `RTCDataChannel` se zatim koristi za prijenos:
 
-- text messages
-- files
-- message-related data
+- tekstualnih poruka
+- datoteka
+- podataka vezanih uz poruke
 
-SDP and ICE signaling is exchanged through Socket.IO. The backend only forwards the signaling packets and does not process the contents transferred through the DataChannel.
+SDP i ICE signalizacija razmjenjuju se putem Socket.IO-a. Backend samo prosljeđuje signalizacijske pakete i ne obrađuje sadržaj koji se prenosi putem DataChannel-a.
 
-If a direct peer-to-peer connection is unavailable, the application can fall back to communication through the backend.
+Ako izravna peer-to-peer veza nije dostupna, aplikacija se može prebaciti na komunikaciju putem backenda.
 
-## Authentication
+## Autentikacija
 
-The application supports:
+Aplikacija podržava:
 
-- username/email and password authentication
-- Google authentication
-- JWT-based sessions
+- autentikaciju putem korisničkog imena/e-maila i lozinke
+- Google autentikaciju
+- sesije temeljene na JWT-u
 
-Authentication tokens are stored by the frontend and automatically included in authenticated API requests.
+Autentikacijske tokene pohranjuje frontend i automatski ih uključuje u autenticirane API zahtjeve.
 
-## File Transfer
+## Prijenos datoteka
 
-Files can be transferred directly between connected peers using WebRTC DataChannels.
+Datoteke se mogu prenositi izravno između povezanih korisnika korištenjem WebRTC DataChannel-a.
 
-The frontend divides binary files into chunks before sending them through the DataChannel. This allows larger files to be transferred without sending the entire file as a single message.
+Frontend dijeli binarne datoteke na dijelove (chunkove) prije slanja putem DataChannel-a. Ovo omogućuje prijenos većih datoteka bez slanja cijele datoteke kao jedne poruke.
 
-When a peer-to-peer connection cannot be used, files can instead be uploaded through the backend.
+Kada se peer-to-peer veza ne može koristiti, datoteke se umjesto toga mogu prenijeti putem backenda.
 
-## Available Scripts
+## Dostupne skripte
 
-| Command | Description |
+| Naredba | Opis |
 |---|---|
-| `npm install` | Installs dependencies |
-| `npm run serve` | Starts the development server |
-| `npm run build` | Creates a production build |
+| `npm install` | Instalira ovisnosti |
+| `npm run serve` | Pokreće razvojni server |
+| `npm run build` | Kreira produkcijsku verziju |
 
-## Deployment
+## Postavljanje u produkciju (deployment)
 
-The frontend can be deployed to a static hosting provider such as Vercel.
+Frontend se može postaviti na statički hosting servis poput Vercela.
 
-The production API URL must be configured using:
+Produkcijski API URL mora se konfigurirati pomoću:
 
 ```env
 VUE_APP_API_URL=https://your-backend-url
 ```
 
-Make sure that the backend allows requests from the frontend's production domain.
+Provjerite dopušta li backend zahtjeve s produkcijske domene frontenda.
 
-## Related Repository
+## Povezani repozitorij
 
 Backend:
 
