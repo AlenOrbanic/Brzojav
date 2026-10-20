@@ -15,17 +15,23 @@
               {{ isForgotPassword ? "Forgot Password?" : isRegister ? "Welcome Chatter!" : "Brzojav Login" }}
             </h2>
             <div v-if="isForgotPassword" class="forgot-password">
-              <p>To recover your password please enter your email or username.</p>
-              <div class="input-field full-width">
-                <label>Email or Username</label>
-                <input type="text" required class="form-control" />
-              </div>
-              <div class="button-wrapper">
-                <button type="submit">Submit</button>
-              </div>
+              <template v-if="!resetEmailSent">
+                <p>To recover your password please enter your email or username.</p>
+                <div class="input-field full-width">
+                  <label>Email or Username</label>
+                  <input v-model="forgotIdentifier" type="text" required class="form-control" />
+                </div>
+                <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
+                <div class="button-wrapper">
+                  <button type="submit" :disabled="loading">
+                    {{ loading ? "Sending..." : "Submit" }}
+                  </button>
+                </div>
+              </template>
+              <div v-else class="success-message">{{ successMessage }}</div>
               <div class="register">
                 <span>Remembered your password? </span>
-                <a href="#" @click.prevent="isForgotPassword = false">Login!</a>
+                <a href="#" @click.prevent="closeForgotPassword">Login!</a>
               </div>
             </div>
             <template v-else>
@@ -112,6 +118,11 @@ const loading = ref(false);
 const googleBtn = ref(null);
 const GOOGLE_CLIENT_ID = process.env.VUE_APP_GOOGLE_CLIENT_ID;
 
+// Forgot password state
+const forgotIdentifier = ref("");
+const resetEmailSent = ref(false);
+const successMessage = ref("");
+
 function renderGoogleButton() {
   if (!window.google || !googleBtn.value) return;
   window.google.accounts.id.initialize({
@@ -139,8 +150,6 @@ async function handleGoogleCredential(response) {
   }
 }
 
-const warming = ref(false);
-
 onMounted(() => {
   api.health.ping(); // fire-and-forget warm-up
   const timer = setInterval(() => {
@@ -166,6 +175,16 @@ function openForgotPassword() {
   isForgotPassword.value = true;
   isRegister.value = false;
   errorMessage.value = "";
+  successMessage.value = "";
+  resetEmailSent.value = false;
+  forgotIdentifier.value = identifier.value; // prefill if they already typed it on the login form
+}
+
+function closeForgotPassword() {
+  isForgotPassword.value = false;
+  errorMessage.value = "";
+  successMessage.value = "";
+  resetEmailSent.value = false;
 }
 
 async function handleSubmit() {
@@ -174,8 +193,7 @@ async function handleSubmit() {
 
   try {
     if (isForgotPassword.value) {
-      // implement forgot password
-      alert("Forgot password submitted!");
+      await handleForgotPassword();
       return;
     }
 
@@ -186,6 +204,21 @@ async function handleSubmit() {
     }
   } finally {
     loading.value = false;
+  }
+}
+
+async function handleForgotPassword() {
+  if (!forgotIdentifier.value.trim()) {
+    errorMessage.value = "Please enter your email or username";
+    return;
+  }
+  try {
+    const data = await api.auth.forgotPassword(forgotIdentifier.value.trim());
+    successMessage.value =
+      data.message || "If an account exists, a reset link has been sent to its email.";
+    resetEmailSent.value = true;
+  } catch (err) {
+    errorMessage.value = err.message;
   }
 }
 
@@ -419,6 +452,15 @@ a:hover {
   border-radius: 6px;
   padding: 8px 12px;
   font-size: 0.9rem;
+  text-align: center;
+}
+.success-message {
+  color: #fff;
+  background: rgba(0, 160, 60, 0.45);
+  border: 1px solid #00c853;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 0.95rem;
   text-align: center;
 }
 .button-wrapper.auth-buttons {

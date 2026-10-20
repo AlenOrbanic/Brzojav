@@ -1635,12 +1635,12 @@ export default {
     sortedChats() {
       return [...this.chats].sort((a, b) => {
         if (a.pinned && b.pinned) {
-          return a.pinnedAt - b.pinnedAt;
+          return (a.pinnedAt || 0) - (b.pinnedAt || 0);
         }
         if (a.pinned) return -1;
         if (b.pinned) return 1;
 
-        return 0;
+        return (b.activityAt || 0) - (a.activityAt || 0);
       });
     },
     filteredHeaderMenuItems() {
@@ -1981,6 +1981,7 @@ export default {
       if (!senderBlocked) {
         chat.lastMessage = msg.text || (msg.files?.length ? '📎 File' : '');
         chat.lastMessageSender = senderU || chat.lastMessageSender;
+        chat.activityAt = Date.now();
 
         if (
           fromUsername && fromUsername !== this.user.username &&
@@ -2229,6 +2230,7 @@ export default {
         pinnedMessage:     chat.pinnedMessage || null,
         unread:   initialUnread,
         lastReadAt: chat.lastReadAt || null,
+        activityAt: lastMsgAt,
       };
     },
     async updateProfile(field, value) {
@@ -2992,6 +2994,7 @@ export default {
       this.selectedChat.messages.push(optimistic);
       this.selectedChat.lastMessage = text || (pending.length ? '📎 File' : '');
       this.selectedChat.lastMessageSender = this.user.username;
+      this.selectedChat.activityAt = Date.now();
 
       // resetiraj input prije async dijela
       this.newMessage   = '';

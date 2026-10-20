@@ -62,6 +62,20 @@ export const auth = {
       body: JSON.stringify({ credential }),
     });
   },
+
+  async forgotPassword(identifier) {
+    return request('/api/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ identifier }),
+    });
+  },
+
+  async resetPassword(token, password) {
+    return request('/api/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+    });
+  },
 };
 
 export const chats = {
