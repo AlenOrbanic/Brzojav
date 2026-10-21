@@ -967,7 +967,13 @@
                       style="display: inline-block"
                     >
                     <img
-                      v-if="m.fileType === 'image'"
+                      v-if="m.fileType === 'image' && isSticker(m)"
+                      :src="m.url"
+                      class="msg-sticker"
+                      draggable="false"
+                    />
+                    <img
+                      v-else-if="m.fileType === 'image'"
                       :src="m.url"
                       class="msg-media"
                       @click="openLightbox({
@@ -1197,14 +1203,60 @@
                 style="display: none"
                 @change="handleFileUpload"
               />
-              <textarea
-                v-model="newMessage"
-                @keydown="handleKeyPress"
-                ref="messageInput"
-                class="form-control me-2"
-                placeholder="Type a message..."
-                rows="1"
-              ></textarea>
+              <div class="input-wrap me-2">
+                <textarea
+                  v-model="newMessage"
+                  @keydown="handleKeyPress"
+                  ref="messageInput"
+                  class="form-control input-with-icons"
+                  placeholder="Type a message..."
+                  rows="1"
+                ></textarea>
+                <div class="input-icons">
+                  <button
+                    type="button"
+                    ref="stickerBtn"
+                    class="input-icon-btn"
+                    title="Stickers"
+                    @mousedown.stop
+                    @click.stop="toggleStickerPanel"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.2"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M3 1.5h10A1.5 1.5 0 0 1 14.5 3v5.5L9 14.5H3A1.5 1.5 0 0 1 1.5 13V3A1.5 1.5 0 0 1 3 1.5z" />
+                      <path d="M14.5 8.5H10.5A1.5 1.5 0 0 0 9 10v4.5" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    ref="emojiBtn"
+                    class="input-icon-btn"
+                    title="Emoji"
+                    @mousedown.stop
+                    @click.stop="toggleInputEmojiPicker"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="20"
+                      height="20"
+                      fill="currentColor"
+                      class="bi bi-emoji-grin"
+                      viewBox="0 0 16 16"
+                    >
+                      <path d="M12.946 11.398A6.002 6.002 0 0 1 2.108 9.14c-.114-.595.426-1.068 1.028-.997C4.405 8.289 6.48 8.5 8 8.5s3.595-.21 4.864-.358c.602-.07 1.142.402 1.028.998a5.95 5.95 0 0 1-.946 2.258m-.078-2.25C11.588 9.295 9.539 9.5 8 9.5s-3.589-.205-4.868-.352c.11.468.286.91.517 1.317A37 37 0 0 0 8 10.75a37 37 0 0 0 4.351-.285c.231-.407.407-.85.517-1.317m-1.36 2.416c-1.02.1-2.255.186-3.508.186s-2.488-.086-3.507-.186A5 5 0 0 0 8 13a5 5 0 0 0 3.507-1.436ZM6.488 7c.114-.294.179-.636.179-1 0-1.105-.597-2-1.334-2C4.597 4 4 4.895 4 6c0 .364.065.706.178 1 .23-.598.662-1 1.155-1 .494 0 .925.402 1.155 1M12 6c0 .364-.065.706-.178 1-.23-.598-.662-1-1.155-1-.494 0-.925.402-1.155 1a2.8 2.8 0 0 1-.179-1c0-1.105.597-2 1.334-2C11.403 4 12 4.895 12 6" />
+                      <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m0-1A7 7 0 1 1 8 1a7 7 0 0 1 0 14" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
               <button class="btn send-btn" @click="sendMessage">Send</button>
             </div>
           </template>
@@ -1321,6 +1373,76 @@
       @select="pickEmoji"
       @close="emojiPicker.visible = false"
     />
+    <div
+      v-if="inputEmojiPicker.visible"
+      class="input-emoji-popup"
+      :style="{
+        bottom: inputEmojiPicker.bottom + 'px',
+        left: inputEmojiPicker.left + 'px',
+      }"
+      @click.stop
+      @mousedown.stop
+    >
+      <EmojiPicker
+        :theme="theme"
+        :style="{ position: 'static' }"
+        @select="insertEmoji"
+        @close="inputEmojiPicker.visible = false"
+      />
+    </div>
+    <div
+      v-if="stickerPanel.visible"
+      class="sticker-panel"
+      :style="{
+        bottom: stickerPanel.bottom + 'px',
+        left: stickerPanel.left + 'px',
+      }"
+      @click.stop
+      @mousedown.stop
+    >
+      <div class="sticker-panel-head">
+        <span>Stickers</span>
+        <button type="button" class="sticker-close" @click="stickerPanel.visible = false">✕</button>
+      </div>
+      <div class="sticker-grid">
+        <button
+          type="button"
+          class="sticker-add"
+          title="Upload sticker"
+          :disabled="stickerUploading"
+          @click="$refs.stickerFileInput.click()"
+        >
+          {{ stickerUploading ? "…" : "+" }}
+        </button>
+        <div
+          v-for="st in stickers"
+          :key="st.id"
+          class="sticker-item"
+          @click="sendSticker(st)"
+        >
+          <img :src="st.url" draggable="false" />
+          <button
+            type="button"
+            class="sticker-remove"
+            title="Remove sticker"
+            @click.stop="removeSticker(st)"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+      <p v-if="!stickers.length" class="sticker-empty">
+        No stickers yet. Click + to upload an image.
+      </p>
+      <input
+        type="file"
+        ref="stickerFileInput"
+        accept="image/*"
+        multiple
+        style="display: none"
+        @change="handleStickerUpload"
+      />
+    </div>
     <div v-if="messageInfo.visible" class="msg-info-overlay" @click.self="messageInfo.visible = false">
       <div class="msg-info-box">
         <div class="msg-info-title">Message Info</div>
@@ -1391,6 +1513,7 @@ export default {
       this.settings.messageNotifications = userData.user.notificationsEnabled ? 'on' : 'off';
       this.theme = userData.user.theme === 'dark' ? 'dark' : 'light';
       this.blockedUsernames = userData.user.blockedUsers || [];
+      this.loadStickers();
 
       const chatData = await api.chats.getAll();
       this.chats = chatData.chats.map(this.mapChat);
@@ -1534,6 +1657,10 @@ export default {
       chats: [],
       loadingChats: true,
       emojiPicker: { visible: false, x: 0, y: 0 },
+      inputEmojiPicker: { visible: false, bottom: 0, left: 0 },
+      stickerPanel: { visible: false, bottom: 0, left: 0 },
+      stickers: [],
+      stickerUploading: false,
     };
   },
   computed: {
@@ -1543,6 +1670,7 @@ export default {
       for (const msg of this.selectedChat.messages) {
         if (!msg.media?.length) continue;
         for (const m of msg.media) {
+          if (this.isSticker(m)) continue;
           if (m.fileType === 'image' || m.fileType === 'video' || m.fileType === 'gif') {
             media.push({
               url:      m.url,
@@ -2917,6 +3045,8 @@ export default {
       }
     },
     handleClickOutside(event) {
+      this.inputEmojiPicker.visible = false;
+      this.stickerPanel.visible = false;
       const messageMenu = this.$el.querySelector(".message-menu");
       const headerMenu = this.$el.querySelector(".header-menu");
       const isHeaderButton = event.target.closest(".header-icon");
@@ -2968,10 +3098,21 @@ export default {
       if (!this.newMessage.trim() && !this.pendingMedia.length) return;
 
       const text = this.newMessage.replace(/\n+/g, ' ').trim();
-      const clientId = this._genClientId();
       const replyTo = this.replyingTo || null;
       const pending = this.pendingMedia.slice();
-      const recipients = this._chatRecipients(this.selectedChat);
+
+      // resetiraj input prije async dijela
+      this.newMessage   = '';
+      this.replyingTo   = null;
+      this.pendingMedia = [];
+      this.inputEmojiPicker.visible = false;
+
+      await this._dispatchMessage({ text, replyTo, pending });
+    },
+    async _dispatchMessage({ text, replyTo, pending, preview = '', sticker = null }) {
+      const clientId = this._genClientId();
+      // Stickeri su već na Cloudinaryju: server ih dostavlja preko socketa, P2P preskačemo
+      const recipients = sticker ? [] : this._chatRecipients(this.selectedChat);
 
       // lokalno dodaj poruku odmah
       const optimistic = {
@@ -2992,14 +3133,10 @@ export default {
       optimistic.media = optimistic.files.map(f => ({ fileType: f.fileType, url: f.url, name: f.name }));
       this.selectedChat.messages = this.selectedChat.messages || [];
       this.selectedChat.messages.push(optimistic);
-      this.selectedChat.lastMessage = text || (pending.length ? '📎 File' : '');
+      this.selectedChat.lastMessage = text || preview || (pending.length ? '📎 File' : '');
       this.selectedChat.lastMessageSender = this.user.username;
       this.selectedChat.activityAt = Date.now();
 
-      // resetiraj input prije async dijela
-      this.newMessage   = '';
-      this.replyingTo   = null;
-      this.pendingMedia = [];
       this.$nextTick(this.scrollToBottom);
 
       // Pošalji P2P paralelno sa serverom
@@ -3047,8 +3184,9 @@ export default {
         const data = await api.messages.send(this.selectedChat.id, {
           text,
           replyTo,
-          files: pending,
+          files: sticker ? [] : pending,
           clientId,
+          stickerId: sticker ? sticker.id : null,
         });
         const msg = data.message;
         // Zamijeni placeholder sa stvarnim ID-om i Cloudinary URL-ovima
@@ -3065,6 +3203,150 @@ export default {
       } catch (err) {
         console.error('Failed to send message:', err.message);
       }
+    },
+    // ---------- Emoji u input polju ----------
+    _popupPos(refName, width) {
+      const rect = this.$refs[refName].getBoundingClientRect();
+      return {
+        bottom: window.innerHeight - rect.top + 10,
+        left:   Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8)),
+      };
+    },
+    toggleInputEmojiPicker() {
+      if (this.inputEmojiPicker.visible) {
+        this.inputEmojiPicker.visible = false;
+        return;
+      }
+      this.stickerPanel.visible = false;
+      const pos = this._popupPos('emojiBtn', 320);
+      this.inputEmojiPicker.bottom = pos.bottom;
+      this.inputEmojiPicker.left   = pos.left;
+      this.inputEmojiPicker.visible = true;
+    },
+    insertEmoji(emoji) {
+      const el    = this.$refs.messageInput;
+      const value = this.newMessage || '';
+      const start = el?.selectionStart ?? value.length;
+      const end   = el?.selectionEnd ?? value.length;
+
+      this.newMessage = value.slice(0, start) + emoji + value.slice(end);
+      this.inputEmojiPicker.visible = false;
+
+      this.$nextTick(() => {
+        if (!el) return;
+        const pos = start + emoji.length;
+        el.focus();
+        el.setSelectionRange(pos, pos);
+      });
+    },
+
+    // ---------- Stickeri (spremljeni na serveru, po korisniku) ----------
+    isSticker(m) {
+      return m?.fileType === 'image' && /^sticker[-_]/i.test(m?.name || '');
+    },
+    async loadStickers() {
+      try {
+        const data = await api.stickers.getAll();
+        this.stickers = data.stickers || [];
+      } catch (err) {
+        console.warn('[stickers] failed to load:', err.message);
+      }
+    },
+    toggleStickerPanel() {
+      if (this.stickerPanel.visible) {
+        this.stickerPanel.visible = false;
+        return;
+      }
+      this.inputEmojiPicker.visible = false;
+      const pos = this._popupPos('stickerBtn', 320);
+      this.stickerPanel.bottom = pos.bottom;
+      this.stickerPanel.left   = pos.left;
+      this.stickerPanel.visible = true;
+    },
+    async handleStickerUpload(event) {
+      const files = Array.from(event.target.files || [])
+        .filter(f => f.type.startsWith('image/'))
+        .slice(0, 10);
+      event.target.value = '';
+      if (!files.length) return;
+
+      this.stickerUploading = true;
+      try {
+        const blobs = [];
+        for (const file of files) {
+          try {
+            blobs.push(await this._fileToStickerBlob(file));
+          } catch (err) {
+            console.warn('[stickers] could not read image:', err.message);
+          }
+        }
+        if (!blobs.length) return;
+
+        const data = await api.stickers.upload(blobs);
+        this.stickers = [...(data.stickers || []), ...this.stickers];
+      } catch (err) {
+        alert(err.message || 'Could not upload sticker');
+      } finally {
+        this.stickerUploading = false;
+      }
+    },
+    async removeSticker(sticker) {
+      try {
+        await api.stickers.remove(sticker.id);
+        this.stickers = this.stickers.filter(s => s.id !== sticker.id);
+      } catch (err) {
+        alert(err.message || 'Could not remove sticker');
+      }
+    },
+    // Smanji na max 256px (WebP, ili PNG ako preglednik ne podržava WebP) prije uploada
+    _fileToStickerBlob(file) {
+      return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          if (!img.width || !img.height) return reject(new Error('Image has no size'));
+          const MAX   = 256;
+          const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width  = w;
+          canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          canvas.toBlob(
+            blob => (blob ? resolve(blob) : reject(new Error('Could not convert image'))),
+            'image/webp',
+            0.85
+          );
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error('Invalid image'));
+        };
+        img.src = url;
+      });
+    },
+    async sendSticker(sticker) {
+      if (!this.selectedChat || this.selectedChat.blocked) return;
+      this.stickerPanel.visible = false;
+
+      const replyTo = this.replyingTo || null;
+      this.replyingTo = null;
+
+      await this._dispatchMessage({
+        text: '',
+        replyTo,
+        preview: '🏷️ Sticker',
+        sticker,
+        pending: [{
+          type:     'image',
+          fileType: 'image',
+          url:      sticker.url,
+          name:     `sticker-${sticker.id}.webp`,
+          blob:     null,
+        }],
+      });
     },
     scrollToBottom() {
       const box = this.$refs.messagesBox;
@@ -5621,5 +5903,178 @@ export default {
   font-size: 13px;
   opacity: 0.7;
   font-style: italic;
+}
+
+/* ---- Emoji / sticker buttons inside the message input ---- */
+.input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+.input-wrap textarea.input-with-icons {
+  width: 100%;
+  padding-right: 76px;
+}
+
+.input-icons {
+  position: absolute;
+  right: 8px;
+  bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.input-icon-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.input-icon-btn:hover {
+  color: #ff0000;
+  background: rgba(255, 0, 0, 0.1);
+}
+
+.input-emoji-popup {
+  position: fixed;
+  z-index: 2000;
+}
+
+/* ---- Sticker panel ---- */
+.sticker-panel {
+  position: fixed;
+  z-index: 2000;
+  width: 320px;
+  max-height: 360px;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 0, 0, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.light .sticker-panel {
+  background: #ffffff;
+  color: #111111;
+}
+
+.dark .sticker-panel {
+  background: #1e1e1e;
+  color: #ffffff;
+}
+
+.sticker-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.sticker-close {
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.sticker-close:hover {
+  opacity: 1;
+}
+
+.sticker-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.sticker-add,
+.sticker-item {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.sticker-add {
+  border: 2px dashed #ff0000;
+  background: none;
+  color: #ff0000;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.sticker-add:hover {
+  background: rgba(255, 0, 0, 0.1);
+}
+
+.sticker-item {
+  padding: 4px;
+  background: rgba(128, 128, 128, 0.12);
+}
+
+.sticker-item:hover {
+  background: rgba(255, 0, 0, 0.12);
+}
+
+.sticker-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.sticker-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: 10px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.sticker-item:hover .sticker-remove {
+  display: flex;
+}
+
+.sticker-empty {
+  margin: 10px 0 2px;
+  font-size: 0.85rem;
+  opacity: 0.7;
+  text-align: center;
+}
+
+/* ---- Sticker inside the chat ---- */
+.msg-sticker {
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+  display: block;
+  background: transparent;
+  user-select: none;
 }
 </style>

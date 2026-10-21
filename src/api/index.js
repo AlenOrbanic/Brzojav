@@ -154,13 +154,14 @@ export const messages = {
   },
 
   // Send message
-  async send(chatId, { text = '', replyTo = null, files = [], clientId = null } = {}) {
+  async send(chatId, { text = '', replyTo = null, files = [], clientId = null, stickerId = null } = {}) {
     const token = getToken();
     const form  = new FormData();
 
     form.append('text', text);
     if (replyTo) form.append('replyTo', JSON.stringify(replyTo));
     if (clientId) form.append('clientId', clientId);
+    if (stickerId) form.append('stickerId', stickerId);
 
     for (const f of files) {
       if (f.blob) form.append('files', f.blob, f.name);
@@ -237,6 +238,32 @@ export const users = {
   },
 };
 
+// Stickers (biblioteka korisnika, spremljena na serveru)
+
+export const stickers = {
+  async getAll() {
+    return request('/api/stickers');
+  },
+
+  // blobs = niz Blobova (slike već smanjene na klijentu)
+  async upload(blobs) {
+    const token = getToken();
+    const form  = new FormData();
+    blobs.forEach((b, i) => form.append('files', b, `sticker-${Date.now()}-${i}.webp`));
+
+    const res = await fetch(`${BASE_URL}/api/stickers`, {
+      method:  'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body:    form,
+    });
+    return handleResponse(res);
+  },
+
+  async remove(id) {
+    return request(`/api/stickers/${id}`, { method: 'DELETE' });
+  },
+};
+
 export const links = {
   async preview(url) {
     const encoded = encodeURIComponent(url);
@@ -252,4 +279,4 @@ export const health = {
   },
 };
 export { getToken, getUser };
-export default { auth, chats, messages, users, links, health, getToken, getUser };
+export default { auth, chats, messages, users, stickers, links, health, getToken, getUser };
