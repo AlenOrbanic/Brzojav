@@ -250,6 +250,10 @@
                 <div class="flex-grow-1">
                   <div class="fw-semibold">
                     {{ chat.name }}
+                    <template v-if="listPresence(chat).text">
+                      <span v-if="listPresence(chat).online" class="presence-dot"></span>
+                      <span class="presence-inline" :class="{ online: listPresence(chat).online }">{{ listPresence(chat).text }}</span>
+                    </template>
                     <span v-if="chat.pinned" class="pinned-icon">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -586,7 +590,14 @@
                       </button>
                     </template>
                   </div>
-                  <small class="contact-meta">{{ member.username ? '@' + member.username.replace(/^@/, '') : '' }} · Last seen: {{ member.lastSeen ? formatTime(member.lastSeen) : 'Hidden' }}</small>
+                  <small class="contact-meta">
+                    {{ member.username ? '@' + member.username.replace(/^@/, '') : '' }}
+                    <template v-if="memberPresence(member).text">
+                      ·
+                      <span v-if="memberPresence(member).online" class="presence-dot"></span>
+                      <span class="presence-text" :class="{ online: memberPresence(member).online }">{{ memberPresence(member).text }}</span>
+                    </template>
+                  </small>
                 </div>
               </div>
               </div>
@@ -596,7 +607,11 @@
                 {{ contactInfoData.username ? '@' + contactInfoData.username.replace(/^@/, '') : '' }}
             <template v-if="!contactInfoData.deleted">
               <div class="contact-meta fs-6 mb-1">
-                Last seen: {{ contactInfoData.lastSeen ? formatTimestamp(contactInfoData.lastSeen) : 'Hidden' }}
+                <template v-if="contactPresence.text">
+                  <span v-if="contactPresence.online" class="presence-dot"></span>
+                  <span class="presence-text" :class="{ online: contactPresence.online }">{{ contactPresence.text }}</span>
+                </template>
+                <template v-else-if="contactPresence.hidden">Last seen: Hidden</template>
               </div>
               <div v-if="isContactBlocked" class="blocked-status-row mb-1">
                 <span class="blocked-status-text">This user is blocked</span>
@@ -694,6 +709,10 @@
                 </template>
                 <template v-else>
                   {{ selectedChat.name }}
+                  <template v-if="headerPresence.text">
+                    <span v-if="headerPresence.online" class="presence-dot"></span>
+                    <span class="presence-inline" :class="{ online: headerPresence.online }">{{ headerPresence.text }}</span>
+                  </template>
                   <span
                     v-if="selectedChat?.isGroup"
                     style="font-size: 13px; font-weight: 400; color: gray; margin-left: 4px;"
@@ -1486,6 +1505,7 @@ import ToastMessage from "../components/ToastMessage.vue";
 import api from '../api/index.js';
 import { io } from 'socket.io-client';
 import p2p from '../p2p/peerConnection.js';
+import presence from '../p2p/presence.js';
 export default {
   components: {
   HeaderMenu,
@@ -1531,6 +1551,9 @@ export default {
     document.removeEventListener('keydown', this.handleKeyDown);
     if (this.socket) this.socket.disconnect();
     p2p.closeAll();
+    clearInterval(this.presenceTimer);
+    if (this.presenceOff) this.presenceOff();
+    presence.reset();
   },
   data() {
     return {
@@ -1538,6 +1561,10 @@ export default {
       DEFAULT_AVATAR: 'https://i.pinimg.com/1200x/c5/ab/41/c5ab41e3f9766798af79b40d535f45e0.jpg',
       linkPreviews: {}, // url -> preview object
       socket: null,
+      presenceVersion: 0,   // bumped whenever a presence update arrives
+      nowTick: 0,           // bumped every minute so "x min ago" refreshes
+      presenceTimer: null,
+      presenceOff: null,
       notificationSound: new Audio('/sounds/notification.mp3'),
       messageInfo: {
         visible: false,
@@ -1780,10 +1807,23 @@ export default {
       }
       return this.headerMenuItems;
     },
+    headerPresence() {
+      const c = this.selectedChat;
+      if (!c || c.isGroup || c.deleted || c.blocked) return this.noPresence();
+      return this.userPresence(c.username, c.lastSeen, false);
+    },
+    contactPresence() {
+      const c = this.contactInfoData;
+      if (!c || c.isGroup || c.deleted) return this.noPresence();
+      return this.userPresence(c.username, c.lastSeen, false);
+    },
   },
   watch: {
+    chats() { this.watchPartners(); },
+    'chats.length'() { this.watchPartners(); },
     async 'settings.lastSeen'(val) {
       await api.users.updateMe({ showLastSeen: val === 'shown' }).catch(console.error);
+      if (this.socket) this.socket.emit('presence-refresh');
       const chatData = await api.chats.getAll();
       this.chats = chatData.chats.map(this.mapChat);
     },
@@ -1798,6 +1838,53 @@ export default {
     },
   },
   methods: {
+    // everyone we want live status for: 1-on-1 partners + members of our groups
+    watchPartners() {
+      if (!this.socket) return;
+      const names = new Set();
+      for (const c of this.chats) {
+        if (c.isGroup) {
+          for (const m of c.members || []) {
+            const u = m && (m.username || m);
+            if (typeof u === 'string' && u && !m.deleted && u !== this.user.username) names.add(u);
+          }
+        } else if (!c.deleted && c.username) {
+          names.add(c.username);
+        }
+      }
+      presence.watch([...names]);
+    },
+    noPresence() {
+      return { online: false, text: '', hidden: false };
+    },
+    // { online, text, hidden } for one user. Reads the counters so Vue re-renders
+    // when a presence update arrives and once a minute for the "x ago" text.
+    userPresence(username, fallbackLastSeen = '', short = false) {
+      this.presenceVersion; this.nowTick;
+      if (!username) return this.noPresence();
+      const s = presence.getStatus(username);
+      if (s) return { online: !!s.online, text: presence.statusText(s, short), hidden: !!s.hidden };
+      // live status not loaded yet: fall back to the last-seen from the chat list
+      if (fallbackLastSeen) {
+        const ago = presence.timeAgo(fallbackLastSeen, short);
+        if (ago) return { online: false, text: `Active ${ago}`, hidden: false };
+      }
+      return this.noPresence();
+    },
+    // chat list: DMs show Online / Active x ago, groups only show when the last message was sent
+    listPresence(chat) {
+      this.nowTick;
+      if (!chat) return this.noPresence();
+      if (chat.isGroup) {
+        return { online: false, text: chat.activityAt ? presence.timeAgo(chat.activityAt, true) : '', hidden: false };
+      }
+      if (chat.deleted || chat.blocked) return this.noPresence();
+      return this.userPresence(chat.username, chat.lastSeen, true);
+    },
+    memberPresence(member) {
+      if (!member || member.isMe || member.deleted) return this.noPresence();
+      return this.userPresence(member.username, member.lastSeen, false);
+    },
     closeSettings() {
       this.viewingSettings = false;
       if (this.previousChat) {
@@ -1925,6 +2012,13 @@ export default {
       // Stvarni sadržaj poruke ide preko WebRTC DataChannela.
       p2p.init(this.socket, this.user.username);
       p2p.onMessage(this._onP2PMessage);
+
+      // online / last seen status
+      presence.init(this.socket);
+      this.presenceOff = presence.onPresence(() => { this.presenceVersion++; });
+      this.watchPartners();
+      clearInterval(this.presenceTimer);
+      this.presenceTimer = setInterval(() => { this.nowTick++; }, 60000);
 
       // Server šalje SAMO hint (chatId, messageId, clientId, sender) - NE sadržaj.
       // Ako smo poruku već dobili preko P2P (clientId match), ignoriraj.
@@ -2945,6 +3039,7 @@ export default {
             // Update members in place
             const existing = this.chats.find(c => c.id === chat.id);
             if (existing) existing.members = mapped.members;
+            this.watchPartners();
             this.contactInfoData = { ...this.contactInfoData, members: mapped.members };
           }
         } catch (err) {
@@ -5008,6 +5103,36 @@ export default {
 }
 .chat-name-wrapper {
   cursor: default;
+}
+.presence-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #2ecc40;
+  margin: 0 2px 0 6px;
+  vertical-align: middle;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px 2px rgba(46, 204, 64, 0.75);
+  animation: presenceGlow 2s ease-in-out infinite;
+}
+@keyframes presenceGlow {
+  0%, 100% { box-shadow: 0 0 4px 1px rgba(46, 204, 64, 0.55); }
+  50%      { box-shadow: 0 0 9px 3px rgba(46, 204, 64, 0.95); }
+}
+.presence-inline {
+  font-size: 12px;
+  font-weight: 700;
+  margin-left: 4px;
+  white-space: nowrap;
+  color: gray;
+}
+.presence-text {
+  font-weight: 700;
+}
+.presence-inline.online,
+.presence-text.online {
+  color: #28a745;
 }
 
 .chat-name-edit-icon {
