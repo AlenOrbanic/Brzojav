@@ -136,7 +136,7 @@
                 />
                 <button
                   class="btn theme-action-btn send-invite-btn action-btn-hover mb-2"
-                  :disabled="selectedGroupMembers.length < 2"
+                  :disabled="selectedGroupMembers.length < 2 || creatingGroup"
                   @click="createGroup"
                 >
                   Create group
@@ -203,7 +203,7 @@
               </div>
               <div
                 class="contact-item d-flex justify-content-between align-items-center"
-                @click="showNewGroupView = true"
+                @click="showNewGroupView = true; creatingGroup = false"
               >
                 <div class="d-flex align-items-center flex-grow-1">
                   <div class="new-chat-icon-wrap me-2">
@@ -568,7 +568,7 @@
                       <span v-if="member.isOwner" class="owner-tag">Group owner</span>
                        <span v-if="!member.isMe && isUserBlocked(member.username)" class="blocked-tag">(Blocked)</span>
                       <svg
-                        @click="startEditMember(i, member.name)"
+                        @click.stop="startEditMember(i, member.name)"
                         xmlns="http://www.w3.org/2000/svg"
                         width="14"
                         height="14"
@@ -584,7 +584,7 @@
                       <button
                         v-if="!member.isMe && contactInfoData.ownerId === user.username"
                         class="kick-btn"
-                        @click="kickMember(contactInfoData, i)"
+                        @click.stop="kickMember(contactInfoData, i)"
                       >
                         Kick
                       </button>
@@ -1629,6 +1629,7 @@ export default {
       showNewGroupView: false,
       groupSearch: "",
       selectedGroupMembers: [],
+      creatingGroup: false,
       user: {
         name: "Your Name",
         username: "@yourname",
@@ -1922,7 +1923,7 @@ export default {
       const text = chat.lastMessage || '';
       if (!chat.isGroup || !text) return text;
       const sender = chat.lastMessageSender;
-      if (!sender) return text;
+      if (!sender || sender === 'system') return text;
       let name;
       if (sender === this.user.username) {
         name = 'You';
@@ -2090,6 +2091,42 @@ export default {
         if (this.selectedChat?.id === chatId) {
           this.pinnedMessage = snapshot;
         }
+      });
+
+      // Server-generated system message ("X left the group.", "X was kicked by Y.")
+      this.socket.on('system_message', ({ chatId, messageId, text, createdAt, removedUsername }) => {
+        const chat = this.chats.find(c => c.id === chatId);
+        if (!chat) return;
+
+        if (removedUsername && Array.isArray(chat.members)) {
+          chat.members = chat.members.filter(m => (m.username || m) !== removedUsername);
+        }
+
+        chat.messages = chat.messages || [];
+        if (chat.messages.some(m => String(m.id) === String(messageId))) return;
+
+        chat.messages.push({ id: messageId, sender: 'system', text, time: createdAt });
+        chat.lastMessage       = text;
+        chat.lastMessageSender = 'system';
+        chat.activityAt        = Date.now();
+
+        if (this.selectedChat?.id === chatId) {
+          this.$nextTick(this.scrollToBottom);
+        } else {
+          chat.unread = true;
+        }
+      });
+
+      // We were kicked from a group (or the owner deleted it)
+      this.socket.on('chat_removed', ({ chatId }) => {
+        const index = this.chats.findIndex(c => c.id === chatId);
+        if (index === -1) return;
+        if (this.selectedChat?.id === chatId) {
+          this.selectedChat = null;
+          this.viewingContactInfo = false;
+          this.contactInfoData = null;
+        }
+        this.chats.splice(index, 1);
       });
 
       this.socket.on('reactions_updated', async ({ chatId, messageId }) => {
@@ -2557,16 +2594,24 @@ export default {
       if (!groupChat?.members) return;
       const kicked = groupChat.members[memberIndex];
       try {
-        await api.chats.kickMember(groupChat.id, kicked.username);
+        const data = await api.chats.kickMember(groupChat.id, kicked.username);
         groupChat.members.splice(memberIndex, 1);
         if (!groupChat.hasCustomName) {
           groupChat.name = groupChat.members.map(m => m.name).join(', ');
         }
-        groupChat.messages.push({
-          sender: 'system',
-          text: `${this.user.name} kicked ${kicked.name} from the group.`,
-        });
-        groupChat.lastMessage = `${this.user.name} kicked ${kicked.name}`;
+        if (data.message) {
+          const target = this.chats.find(c => c.id === groupChat.id) || groupChat;
+          target.messages = target.messages || [];
+          target.messages.push({
+            id:     data.message._id,
+            sender: 'system',
+            text:   data.message.text,
+            time:   data.message.createdAt,
+          });
+          target.lastMessage       = data.message.text;
+          target.lastMessageSender = 'system';
+          if (this.selectedChat?.id === target.id) this.$nextTick(this.scrollToBottom);
+        }
       } catch (err) {
         console.error('Failed to kick member:', err.message);
       }
@@ -2734,6 +2779,10 @@ export default {
     },
     async createGroup() {
       if (this.selectedGroupMembers.length < 2) return;
+      // Block double/spam clicks. Set synchronously, before any await.
+      // Stays locked after success; reset when the user opens "New group" again.
+      if (this.creatingGroup) return;
+      this.creatingGroup = true;
 
       // Strip leading @ if present
       const memberUsernames = this.selectedGroupMembers.map(c => 
@@ -2761,6 +2810,7 @@ export default {
 
       } catch (err) {
         console.error('Failed to create group:', err.message);
+        this.creatingGroup = false; // let the user retry after a failure
       }
     },
     triggerFileUpload() {
@@ -2912,7 +2962,9 @@ export default {
         const data = await api.messages.getAll(chat.id);
         chat.messages = data.messages.map(msg => ({
           id:        msg._id,
-          sender:    msg.sender === this.user.username ? 'me' : msg.sender,
+          sender:    msg.sender === 'system'
+            ? 'system'
+            : (msg.sender === this.user.username ? 'me' : msg.sender),
           text:      msg.text,
           files:     msg.files || [],
           media:     (msg.files || []).map(f => ({ fileType: f.fileType, url: f.url, name: f.name })),
@@ -3454,6 +3506,7 @@ export default {
       this.newContactSearch = "";
       this.groupSearch = "";
       this.selectedGroupMembers = [];
+      this.creatingGroup = false;
       this.selectedChat = null;
     },
     openMessageMenu(event, msg) {
